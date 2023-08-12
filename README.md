@@ -13,3 +13,13 @@ sncast --account ffbbcc --network testnet --url https://starknet-goerli.infura.i
 ```
 MOCK ERC : https://goerli.voyager.online/contract/0x034e31357d1c3693bda06d04bf4c51557514ECed5A8e9973bDb772f7fB978B36#writeContract
 FLIP : https://goerli.voyager.online/contract/0x04efeabc07d1ea8223a5a39c8cbbe0965b5fecb4542aed363a0dc235894f98bb#events
+
+TODO:
+
+1. Struct packing
+2. Full Ownable interface
+3. Customizable treasury address
+4. Limits on wagers
+5. Hard limits on payouts against an exploit
+6. Array interface for onchain random number hashes
+7. Counters for simple indexing replacement for the backend. 
