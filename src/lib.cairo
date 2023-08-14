@@ -1,6 +1,6 @@
 
 //use core::traits::Into;
-
+use array::{Span, ArrayTrait, SpanTrait};
 use starknet::ContractAddress;
 const WETH_ADDRESS: felt252 = 0x00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3;
 //const x : ContractAddress =  starknet::contract_address_const::<0x00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3>();
@@ -14,6 +14,9 @@ trait IFlip<TContractState> {
 
     fn calculate_keccak(self:  @TContractState, num : u256) -> u256;
     fn write_fair_rng(ref self: TContractState, request_id : felt252, fair_random_number_hash : u256);
+    fn write_fair_rng_batch(ref self: TContractState, request_ids : Array<felt252>, fair_random_number_hashes : Array<u256>);
+    fn get_fair_rng(self:  @TContractState, request_id : felt252) -> u256;
+    
     fn owner(self: @TContractState) -> ContractAddress;
 }
 
@@ -43,6 +46,7 @@ mod Flip {
     struct Storage {
         balance: felt252,
         next_request_id: felt252,
+        last_request_id_to_finalize: felt252,
         // address, times, wager amount, toss result
         requests: LegacyMap<felt252, (ContractAddress, u256, u256, u256)>,
         requestStatus: LegacyMap<felt252, felt252>,
@@ -100,6 +104,25 @@ mod Flip {
             let ownable = Ownable::unsafe_new_contract_state(); 
             InternalImpl::assert_only_owner(@ownable);
             self.fair_random_numbers.write(request_id,fair_random_number_hash);
+        }
+        fn write_fair_rng_batch(ref self: ContractState, request_ids : Array<felt252>, fair_random_number_hashes : Array<u256>){
+            assert(request_ids.len() == fair_random_number_hashes.len(),'Sizes must match');
+
+            let mut index:usize = 0;
+            loop {
+
+                let request_id = *request_ids.at(index);
+                let fair_random_number_hash = *fair_random_number_hashes.at(index);
+                self.fair_random_numbers.write(request_id,fair_random_number_hash);   
+                index += 1;
+                if request_ids.len() == index {
+                    break;
+                };
+            }
+
+        }
+        fn get_fair_rng(self:  @ContractState, request_id : felt252) -> u256 {
+            self.fair_random_numbers.read(request_id)
         }
 
         //fn transfer_ownership(ref self: ContractState, new_owner: ContractAddress) {

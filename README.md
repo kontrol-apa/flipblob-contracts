@@ -31,3 +31,7 @@ FLIP : https://goerli.voyager.online/contract/0x04efeabc07d1ea8223a5a39c8cbbe096
 5. Hard limits on payouts against an exploit
 6. Array interface for onchain random number hashes
 7. Counters for simple indexing replacement for the backend. 
+
+
+### Security 
+* what happens if someone sends are request for a request id without a hash, if its 0, 
