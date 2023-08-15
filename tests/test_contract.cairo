@@ -9,6 +9,7 @@ use debug::PrintTrait;
 use FlipBlob::IFlipSafeDispatcher;
 use FlipBlob::IFlipSafeDispatcherTrait;
 
+
 fn deploy_contract(name: felt252) -> ContractAddress {
     let class_hash = declare(name);
     let prepared = PreparedContract {
