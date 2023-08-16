@@ -2,8 +2,6 @@ use core::zeroable::Zeroable;
 
 use array::{Span, ArrayTrait, SpanTrait};
 use starknet::ContractAddress;
-const WETH_ADDRESS: felt252 = 0x00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3;
-//const x : ContractAddress =  starknet::contract_address_const::<0x00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3>();
 
 mod merc20;
 
@@ -25,7 +23,7 @@ trait IFlip<TContractState> {
     fn get_flip_fee(self: @TContractState)-> u256;
     fn set_token_support(ref self: TContractState, tokenName:felt252, tokenAddr: ContractAddress);
     fn is_token_support(self: @TContractState, tokenName:felt252) -> bool;
-
+    fn update_treasury (ref self: TContractState, treasuryAddress: felt252);
 
 }
 
@@ -45,8 +43,6 @@ mod Flip {
     use option::OptionTrait;
     use zeroable::Zeroable;
 
-    //const x : felt252 =  starknet::contract_address_const::<0x00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3>();
-    // const treasury_addy: felt252 = 0x05fd781a9fb5a87e7eff097d25860d6ab5d5662235b2e49189565c822f4c6fc8;
 
     #[storage]
     struct Storage {
@@ -259,6 +255,13 @@ mod Flip {
             else {
                 return true;
             }
+        }
+
+        fn update_treasury (ref self: ContractState, treasuryAddress: felt252) {
+            let ownable = Ownable::unsafe_new_contract_state(); 
+            InternalImpl::assert_only_owner(@ownable);
+            assert(treasuryAddress.is_non_zero(), 'Cant use 0 address');
+            self.treasury_address.write(treasuryAddress);
         }
     }
 }
