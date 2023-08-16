@@ -21,6 +21,10 @@ trait IFlip<TContractState> {
     fn write_fair_rng_batch(ref self: TContractState, request_ids : Array<felt252>, fair_random_number_hashes : Array<u256>);
     fn get_fair_rng(self:  @TContractState, request_id : felt252) -> u256;
     fn owner(self: @TContractState) -> ContractAddress;
+    fn set_flip_fee(ref self: TContractState, newFee:u256);
+    fn get_flip_fee(self: @TContractState)-> u256;
+
+
 }
 
 #[starknet::interface]
@@ -41,7 +45,6 @@ mod Flip {
     use super::{IWETHDispatcher, IWETHDispatcherTrait};
     //const x : felt252 =  starknet::contract_address_const::<0x00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3>();
     const treasury_addy: felt252 = 0x05fd781a9fb5a87e7eff097d25860d6ab5d5662235b2e49189565c822f4c6fc8;
-    
 
     #[storage]
     struct Storage {
@@ -50,6 +53,7 @@ mod Flip {
         last_request_id_finalized: felt252, // required for backend to pick up unfinalized requests
         // requestid -> address, times, wager amount, toss result
         // felt252 -> tupple (replace with struct)
+        flip_fee:u256,
         requests: LegacyMap<felt252, (ContractAddress, u256, u256, u256)>,
         requestStatus: LegacyMap<felt252, felt252>,
         fair_random_numbers: LegacyMap<felt252, u256>,
@@ -86,6 +90,7 @@ mod Flip {
         let mut unsafe_state = Ownable::unsafe_new_contract_state();
         InternalImpl::initializer(ref unsafe_state,caller); // set the caller as owner
         self.next_request_id.write(1); // if request ids start from 0, it makes it super hard on the backend to track some stuff
+        self.flip_fee.write(5);
     }
 
     #[external(v0)]
@@ -171,11 +176,20 @@ mod Flip {
                 let x: felt252 = starknet::contract_address_to_felt252(player_address);
                 IWETHDispatcher {
                     contract_address: WETH
-                }.transferFrom(treasury_addy, x, (wager_amount + (wager_amount * 95 / 100)));
+                }.transferFrom(treasury_addy, x, (wager_amount + (wager_amount * (100 - self.flip_fee.read()) / 100)));
             }
             self.last_request_id_finalized.write(requestId);
             self.emit(RequestFinalized { request_id :requestId, success : success  });
             
+        }
+
+        fn set_flip_fee(ref self: ContractState, newFee:u256) {
+            assert( newFee <= 100, 'Fee cant be higher than 100');
+            self.flip_fee.write(5);
+        }
+
+        fn get_flip_fee(self: @ContractState) -> u256 {
+            self.flip_fee.read()
         }
     }
 }
