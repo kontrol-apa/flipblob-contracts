@@ -44,7 +44,7 @@ mod Flip {
     //use starknet::syscalls::keccak_syscall;
     use super::{IWETHDispatcher, IWETHDispatcherTrait};
     //const x : felt252 =  starknet::contract_address_const::<0x00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3>();
-    const treasury_addy: felt252 = 0x05fd781a9fb5a87e7eff097d25860d6ab5d5662235b2e49189565c822f4c6fc8;
+    // const treasury_addy: felt252 = 0x05fd781a9fb5a87e7eff097d25860d6ab5d5662235b2e49189565c822f4c6fc8;
 
     #[storage]
     struct Storage {
@@ -55,6 +55,7 @@ mod Flip {
         requests: LegacyMap<felt252, requestMetadata>,
         requestStatus: LegacyMap<felt252, felt252>,
         fair_random_numbers: LegacyMap<felt252, u256>,
+        treasury_address: felt252,
     }
 
     #[derive(Copy, Drop, Serde, starknet::Store)]
@@ -90,13 +91,14 @@ mod Flip {
 
 
     #[constructor]
-    fn constructor(ref self: ContractState) {
+    fn constructor(ref self: ContractState, treasuryAddress: felt252, flipFee: u256) {
         // owner address
         let caller: ContractAddress = get_caller_address();
         let mut unsafe_state = Ownable::unsafe_new_contract_state();
         InternalImpl::initializer(ref unsafe_state,caller); // set the caller as owner
         self.next_request_id.write(1); // if request ids start from 0, it makes it super hard on the backend to track some stuff
-        self.flip_fee.write(5);
+        self.flip_fee.write(flipFee);
+        self.treasury_address.write(treasuryAddress);
     }
 
     #[external(v0)]
@@ -158,7 +160,7 @@ mod Flip {
             let caller: ContractAddress = get_caller_address();
             let issuer = starknet::contract_address_to_felt252(caller);
             let WETH: ContractAddress = starknet::contract_address_const::<0x034e31357d1c3693bda06d04bf4c51557514ECed5A8e9973bDb772f7fB978B36>();
-            IWETHDispatcher {contract_address: WETH}.transferFrom(issuer, treasury_addy, wager_amount);
+            IWETHDispatcher {contract_address: WETH}.transferFrom(issuer, self.treasury_address.read(), wager_amount);
             let current_request_id: felt252 = self.next_request_id.read();
             self.next_request_id.write(current_request_id + 1); // increment
             self.requests.write(current_request_id, requestMetadata {userAddress:caller, times:times, wager_amount: wager_amount, chosen_coin_face:toss_result});
@@ -188,7 +190,7 @@ mod Flip {
                 let x: felt252 = starknet::contract_address_to_felt252(player_address);
                 IWETHDispatcher {
                     contract_address: WETH
-                }.transferFrom(treasury_addy, x, (wager_amount + (wager_amount * (100 - self.flip_fee.read()) / 100)));
+                }.transferFrom(self.treasury_address.read(), x, (wager_amount + (wager_amount * (100 - self.flip_fee.read()) / 100)));
             }
             self.last_request_id_finalized.write(requestId);
             self.emit(RequestFinalized { request_id :requestId, success : success  });
@@ -199,7 +201,7 @@ mod Flip {
             let ownable = Ownable::unsafe_new_contract_state(); 
             InternalImpl::assert_only_owner(@ownable);
             assert( newFee <= 100, 'Fee cant be higher than 100');
-            self.flip_fee.write(5);
+            self.flip_fee.write(newFee);
         }
 
         fn get_flip_fee(self: @ContractState) -> u256 {
