@@ -20,7 +20,6 @@ trait IFlip<TContractState> {
     fn write_fair_rng(ref self: TContractState, request_id : felt252, fair_random_number_hash : u256);
     fn write_fair_rng_batch(ref self: TContractState, request_ids : Array<felt252>, fair_random_number_hashes : Array<u256>);
     fn get_fair_rng(self:  @TContractState, request_id : felt252) -> u256;
-    
     fn owner(self: @TContractState) -> ContractAddress;
 }
 
@@ -34,16 +33,15 @@ mod Flip {
     use starknet::ContractAddress;
     //use serde::Serde;
     //use starknet::Felt252TryIntoContractAddress;
-    use openzeppelin::access::ownable::Ownable::InternalImpl;
     use openzeppelin::access::ownable::Ownable;
-    use openzeppelin::access::ownable::Ownable::OwnableImpl;
+    use openzeppelin::access::ownable::Ownable::{InternalImpl,OwnableImpl };
     use array::{Span, ArrayTrait, SpanTrait};
-    use starknet::get_caller_address;
-    use starknet::get_contract_address;
+    use starknet::{get_caller_address, get_contract_address };
     //use starknet::syscalls::keccak_syscall;
     use super::{IWETHDispatcher, IWETHDispatcherTrait};
     //const x : felt252 =  starknet::contract_address_const::<0x00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3>();
     const treasury_addy: felt252 = 0x05fd781a9fb5a87e7eff097d25860d6ab5d5662235b2e49189565c822f4c6fc8;
+    
 
     #[storage]
     struct Storage {
