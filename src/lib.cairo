@@ -10,7 +10,7 @@ mod merc20;
 #[starknet::interface]
 trait IFlip<TContractState> {
     fn get_next_request_id(self: @TContractState) -> felt252;
-    fn get_request(self: @TContractState, request_id : felt252) -> (ContractAddress, u256, u256, u256);
+    fn get_request(self: @TContractState, request_id : felt252) -> Flip::requestMetadata;
     //fn transfer_ownership(ref self: TContractState, new_owner: ContractAddress);
     fn issue_request(ref self: TContractState, times: u256, wager_amount: u256, toss_result: u256);
     fn finalize_request(ref self: TContractState, requestId: felt252, rng: u256);
@@ -54,9 +54,17 @@ mod Flip {
         // requestid -> address, times, wager amount, toss result
         // felt252 -> tupple (replace with struct)
         flip_fee:u256,
-        requests: LegacyMap<felt252, (ContractAddress, u256, u256, u256)>,
+        requests: LegacyMap<felt252, requestMetadata>,
         requestStatus: LegacyMap<felt252, felt252>,
         fair_random_numbers: LegacyMap<felt252, u256>,
+    }
+
+    #[derive(Copy, Drop, Serde, starknet::Store)]
+    struct requestMetadata {
+        userAddress: ContractAddress,
+        times: u256,
+        wager_amount: u256,
+        chosen_coin_face: u256
     }
 
     #[event]
@@ -109,7 +117,7 @@ mod Flip {
         fn get_request_status(self: @ContractState, request_id : felt252) -> felt252 {
             self.requestStatus.read(request_id)
         }
-        fn get_request(self: @ContractState, request_id : felt252) -> (ContractAddress, u256, u256, u256){
+        fn get_request(self: @ContractState, request_id : felt252) -> requestMetadata{
             self.requests.read(request_id)
         }
 
@@ -155,13 +163,19 @@ mod Flip {
             IWETHDispatcher {contract_address: WETH}.transferFrom(issuer, treasury_addy, wager_amount);
             let current_request_id: felt252 = self.next_request_id.read();
             self.next_request_id.write(current_request_id + 1); // increment
-            self.requests.write(current_request_id, (caller, times, wager_amount, toss_result));
+            self.requests.write(current_request_id, requestMetadata {userAddress:caller, times:times, wager_amount: wager_amount, chosen_coin_face:toss_result});
             self.emit(RequestIssued { wager_amount :wager_amount, issuer :  issuer, toss_prediction : toss_result, times : times });
         }
         fn finalize_request(ref self: ContractState, requestId: felt252, rng: u256) {
-            let (player_address, times, wager_amount, toss_result_prediction) = self
+            let request = self
                 .requests
                 .read(requestId);
+            
+            let player_address  = request.userAddress ;
+            let times  = request.times;
+            let wager_amount  = request.wager_amount ;
+            let toss_result_prediction  = request.chosen_coin_face ;
+
             let request_status = self.requestStatus.read(requestId);
             let res = keccak::keccak_u256s_le_inputs(array![rng].span()); // returns a u256
             let fair_random_number_hash = self.fair_random_numbers.read(requestId);
