@@ -1,3 +1,4 @@
+use core::zeroable::Zeroable;
 
 use array::{Span, ArrayTrait, SpanTrait};
 use starknet::ContractAddress;
@@ -22,12 +23,14 @@ trait IFlip<TContractState> {
     fn owner(self: @TContractState) -> ContractAddress;
     fn set_flip_fee(ref self: TContractState, newFee:u256);
     fn get_flip_fee(self: @TContractState)-> u256;
+    fn set_token_support(ref self: TContractState, tokenName:felt252, tokenAddr: ContractAddress);
+    fn get_token_support(ref self: TContractState, tokenName:felt252) -> Option<ContractAddress>;
 
 
 }
 
 #[starknet::interface]
-trait IWETH<TContractState> {
+trait ERC20<TContractState> {
     fn transferFrom(ref self: TContractState, sender: felt252, recipient: felt252, amount: u256);
 }
 
@@ -38,7 +41,10 @@ mod Flip {
     use openzeppelin::access::ownable::Ownable::{InternalImpl,OwnableImpl };
     use array::{Span, ArrayTrait, SpanTrait};
     use starknet::{get_caller_address, get_contract_address };
-    use super::{IWETHDispatcher, IWETHDispatcherTrait};
+    use super::{ERC20Dispatcher, ERC20DispatcherTrait};
+    use option::OptionTrait;
+    use zeroable::Zeroable;
+
     //const x : felt252 =  starknet::contract_address_const::<0x00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3>();
     // const treasury_addy: felt252 = 0x05fd781a9fb5a87e7eff097d25860d6ab5d5662235b2e49189565c822f4c6fc8;
 
@@ -47,11 +53,12 @@ mod Flip {
         balance: felt252,
         next_request_id: felt252,
         last_request_id_finalized: felt252, // required for backend to pick up unfinalized requests
-        flip_fee:u256,
         requests: LegacyMap<felt252, requestMetadata>,
         requestStatus: LegacyMap<felt252, felt252>,
         fair_random_numbers: LegacyMap<felt252, u256>,
+        supported_erc20: LegacyMap<felt252, ContractAddress>,
         treasury_address: felt252,
+        flip_fee:u256,
     }
 
     #[derive(Copy, Drop, Serde, starknet::Store)]
@@ -157,7 +164,7 @@ mod Flip {
             let caller: ContractAddress = get_caller_address();
             let issuer = starknet::contract_address_to_felt252(caller);
             let WETH: ContractAddress = starknet::contract_address_const::<0x034e31357d1c3693bda06d04bf4c51557514ECed5A8e9973bDb772f7fB978B36>();
-            IWETHDispatcher {contract_address: WETH}.transferFrom(issuer, self.treasury_address.read(), wager_amount);
+            ERC20Dispatcher {contract_address: WETH}.transferFrom(issuer, self.treasury_address.read(), wager_amount);
             let current_request_id: felt252 = self.next_request_id.read();
             self.next_request_id.write(current_request_id + 1); // increment
             self.requests.write(current_request_id, requestMetadata {userAddress:caller, times:times, wager_amount: wager_amount, chosen_coin_face:toss_result});
@@ -185,7 +192,7 @@ mod Flip {
                 let x = false;
                 let WETH: ContractAddress = starknet::contract_address_const::<0x034e31357d1c3693bda06d04bf4c51557514ECed5A8e9973bDb772f7fB978B36>();
                 let x: felt252 = starknet::contract_address_to_felt252(player_address);
-                IWETHDispatcher {
+                ERC20Dispatcher {
                     contract_address: WETH
                 }.transferFrom(self.treasury_address.read(), x, (wager_amount + (wager_amount * (100 - self.flip_fee.read()) / 100)));
             }
@@ -203,6 +210,23 @@ mod Flip {
 
         fn get_flip_fee(self: @ContractState) -> u256 {
             self.flip_fee.read()
+        }
+
+        fn set_token_support(ref self: ContractState, tokenName:felt252, tokenAddr: ContractAddress) {
+            let ownable = Ownable::unsafe_new_contract_state(); 
+            InternalImpl::assert_only_owner(@ownable);
+            self.supported_erc20.write(tokenName, tokenAddr);
+        }
+
+        fn get_token_support(ref self: ContractState, tokenName:felt252) -> Option<ContractAddress>{
+            let tokenAddress = self.supported_erc20.read(tokenName);
+            if tokenAddress.is_zero() {
+
+                return Option::None(());
+            }
+            else {
+                return Option::Some(tokenAddress);
+            }
         }
     }
 }
