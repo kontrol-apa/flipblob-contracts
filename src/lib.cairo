@@ -184,6 +184,8 @@ mod Flip {
         }
 
         fn set_flip_fee(ref self: ContractState, newFee:u256) {
+            let ownable = Ownable::unsafe_new_contract_state(); 
+            InternalImpl::assert_only_owner(@ownable);
             assert( newFee <= 100, 'Fee cant be higher than 100');
             self.flip_fee.write(5);
         }
