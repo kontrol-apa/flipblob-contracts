@@ -6,9 +6,8 @@ use starknet::ContractAddress;
 use starknet::Felt252TryIntoContractAddress;
 use cheatcodes::PreparedContract;
 use debug::PrintTrait;
-use FlipBlob::IFlipSafeDispatcher;
-use FlipBlob::IFlipSafeDispatcherTrait;
-
+use FlipBlob::flip::IFlipSafeDispatcher;
+use FlipBlob::flip::IFlipSafeDispatcherTrait;
 
 fn deploy_contract(name: felt252) -> ContractAddress {
     let class_hash = declare(name);
