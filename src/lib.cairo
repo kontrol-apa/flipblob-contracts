@@ -12,7 +12,7 @@ trait IFlip<TContractState> {
     fn get_next_request_id(self: @TContractState) -> felt252;
     fn get_request(self: @TContractState, request_id : felt252) -> Flip::requestMetadata;
     fn transfer_ownership(ref self: TContractState, new_owner: ContractAddress);
-    fn issue_request(ref self: TContractState, times: u256, wager_amount: u256, toss_result: u256);
+    fn issue_request(ref self: TContractState, times: u256, wager_amount: u256, toss_result: u256, erc20_name: felt252);
     fn finalize_request(ref self: TContractState, requestId: felt252, rng: u256);
     fn get_request_status(self: @TContractState, request_id : felt252) -> felt252;
     fn get_last_finalized_request_id(self: @TContractState) -> felt252;
@@ -24,7 +24,7 @@ trait IFlip<TContractState> {
     fn set_flip_fee(ref self: TContractState, newFee:u256);
     fn get_flip_fee(self: @TContractState)-> u256;
     fn set_token_support(ref self: TContractState, tokenName:felt252, tokenAddr: ContractAddress);
-    fn get_token_support(ref self: TContractState, tokenName:felt252) -> Option<ContractAddress>;
+    fn is_token_support(self: @TContractState, tokenName:felt252) -> bool;
 
 
 }
@@ -66,7 +66,8 @@ mod Flip {
         userAddress: ContractAddress,
         times: u256,
         wager_amount: u256,
-        chosen_coin_face: u256
+        chosen_coin_face: u256,
+        token : felt252
     }
 
     #[event]
@@ -81,8 +82,8 @@ mod Flip {
         wager_amount: u256,
         issuer : felt252,
         toss_prediction : u256,
-        times : u256
-
+        times : u256,
+        token : felt252
     }
 
     #[derive(Drop, starknet::Event)]
@@ -102,6 +103,20 @@ mod Flip {
         self.next_request_id.write(1); // if request ids start from 0, it makes it super hard on the backend to track some stuff
         self.flip_fee.write(flipFee);
         self.treasury_address.write(treasuryAddress);
+    }
+
+    #[generate_trait]
+    impl InternalFunctions of InternalFunctionsTrait {
+        fn get_token_support(self: @ContractState, tokenName:felt252) -> Option<ContractAddress> {
+            let tokenAddress = self.supported_erc20.read(tokenName);
+            if tokenAddress.is_zero() {
+
+                return Option::None(());
+            }
+            else {
+                return Option::Some(tokenAddress);
+            }
+        }
     }
 
     #[external(v0)]
@@ -159,46 +174,63 @@ mod Flip {
         }
 
         fn issue_request(
-            ref self: ContractState, times: u256, wager_amount: u256, toss_result: u256
+            ref self: ContractState, times: u256, wager_amount: u256, toss_result: u256, erc20_name: felt252
         ) {
             let caller: ContractAddress = get_caller_address();
             let issuer = starknet::contract_address_to_felt252(caller);
-            let WETH: ContractAddress = starknet::contract_address_const::<0x034e31357d1c3693bda06d04bf4c51557514ECed5A8e9973bDb772f7fB978B36>();
-            ERC20Dispatcher {contract_address: WETH}.transferFrom(issuer, self.treasury_address.read(), wager_amount);
-            let current_request_id: felt252 = self.next_request_id.read();
-            self.next_request_id.write(current_request_id + 1); // increment
-            self.requests.write(current_request_id, requestMetadata {userAddress:caller, times:times, wager_amount: wager_amount, chosen_coin_face:toss_result});
-            self.emit(RequestIssued { wager_amount :wager_amount, issuer :  issuer, toss_prediction : toss_result, times : times });
+
+            match self.get_token_support(erc20_name) {
+                Option::Some(_token_address) => {
+                    ERC20Dispatcher {contract_address: _token_address}.transferFrom(issuer, self.treasury_address.read(), wager_amount);
+                    let current_request_id: felt252 = self.next_request_id.read();
+                    self.next_request_id.write(current_request_id + 1); // increment
+                    self.requests.write(current_request_id, requestMetadata {userAddress:caller, times:times, wager_amount: wager_amount, chosen_coin_face:toss_result, token: erc20_name });
+                    self.emit(RequestIssued { wager_amount :wager_amount, issuer :  issuer, toss_prediction : toss_result, times : times, token: erc20_name});
+                },
+                Option::None(()) => {
+                    panic_with_felt252('Token is Not Supported');
+                },
+            }
+            
         }
         fn finalize_request(ref self: ContractState, requestId: felt252, rng: u256) {
             let request = self
                 .requests
                 .read(requestId);
             
-            let player_address  = request.userAddress ;
+            let user_address  = request.userAddress ;
             let times  = request.times;
             let wager_amount  = request.wager_amount ;
             let toss_result_prediction  = request.chosen_coin_face ;
+            let erc20_name  = request.token ;
 
             let request_status = self.requestStatus.read(requestId);
             let res = keccak::keccak_u256s_le_inputs(array![rng].span()); // returns a u256
             let fair_random_number_hash = self.fair_random_numbers.read(requestId);
+
             assert(res == fair_random_number_hash, 'Wrong number');
             assert(request_status == 0, 'Request already finalized');
+
             self.requestStatus.write(requestId, 1);
             let toss_result = rng % 2;
             let success = toss_result == toss_result_prediction;
             if (success) {
-                let x = false;
-                let WETH: ContractAddress = starknet::contract_address_const::<0x034e31357d1c3693bda06d04bf4c51557514ECed5A8e9973bDb772f7fB978B36>();
-                let x: felt252 = starknet::contract_address_to_felt252(player_address);
-                ERC20Dispatcher {
-                    contract_address: WETH
-                }.transferFrom(self.treasury_address.read(), x, (wager_amount + (wager_amount * (100 - self.flip_fee.read()) / 100)));
+                let user_address_felt252: felt252 = starknet::contract_address_to_felt252(user_address);
+
+                match self.get_token_support(erc20_name) {
+                    Option::Some(_token_address) => {
+                        ERC20Dispatcher {
+                        contract_address: _token_address
+                        }.transferFrom(self.treasury_address.read(), user_address_felt252, (wager_amount + (wager_amount * (100 - self.flip_fee.read()) / 100)));
+                        
+                        self.last_request_id_finalized.write(requestId);
+                        self.emit(RequestFinalized { request_id :requestId, success : success  });
+                    },
+                    Option::None(()) => {
+                        panic_with_felt252('Should Not Execute');  // Should never execute this line
+                    },
+                }
             }
-            self.last_request_id_finalized.write(requestId);
-            self.emit(RequestFinalized { request_id :requestId, success : success  });
-            
         }
 
         fn set_flip_fee(ref self: ContractState, newFee:u256) {
@@ -218,14 +250,14 @@ mod Flip {
             self.supported_erc20.write(tokenName, tokenAddr);
         }
 
-        fn get_token_support(ref self: ContractState, tokenName:felt252) -> Option<ContractAddress>{
+        fn is_token_support(self: @ContractState, tokenName:felt252) -> bool {
             let tokenAddress = self.supported_erc20.read(tokenName);
             if tokenAddress.is_zero() {
 
-                return Option::None(());
+                return false;
             }
             else {
-                return Option::Some(tokenAddress);
+                return true;
             }
         }
     }
