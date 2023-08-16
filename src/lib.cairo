@@ -51,8 +51,6 @@ mod Flip {
         balance: felt252,
         next_request_id: felt252,
         last_request_id_finalized: felt252, // required for backend to pick up unfinalized requests
-        // requestid -> address, times, wager amount, toss result
-        // felt252 -> tupple (replace with struct)
         flip_fee:u256,
         requests: LegacyMap<felt252, requestMetadata>,
         requestStatus: LegacyMap<felt252, felt252>,
