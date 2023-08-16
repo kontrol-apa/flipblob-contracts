@@ -11,12 +11,14 @@ use FlipBlob::flip::IFlipSafeDispatcherTrait;
 
 fn deploy_contract(name: felt252) -> ContractAddress {
     let class_hash = declare(name);
+    let mut calldata = ArrayTrait::new();
+    let treasury:felt252= 0x034e31357d1c3693bda06d04bf4c51557514eced5a8e9973bdb772f7fb978b36;
+    calldata.append(treasury);
     let prepared = PreparedContract {
-        class_hash, constructor_calldata: @ArrayTrait::new()
+        class_hash, constructor_calldata: @calldata
     };
     deploy(prepared).unwrap()
 }
-
 
 
 //#[test]
