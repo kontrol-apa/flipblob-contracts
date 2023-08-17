@@ -104,7 +104,18 @@ fn test_write_batch() {
     calldata.append(flipFeeHigh);
 
     let flip_contract_address = deploy_contract('Flip', calldata);
-    // let contract_address = deploy_contract('ERC20', calldata);
+
+    let mut calldata = ArrayTrait::new();
+    let initialSupply:u256 = 100000000000000000000;
+    let initialSupplyLow = initialSupply.low.into();
+    let initialSupplyHigh = initialSupply.high.into();
+    calldata.append('MOCK_ETH');
+    calldata.append('METH');
+    calldata.append(initialSupplyLow);
+    calldata.append(initialSupplyHigh);
+    calldata.append(treasury);
+
+    let contract_address = deploy_contract('ERC20', calldata);
     let safe_dispatcher = IFlipSafeDispatcher { contract_address:flip_contract_address };
 
     safe_dispatcher.owner().unwrap().print();
