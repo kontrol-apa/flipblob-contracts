@@ -93,7 +93,6 @@ fn deploy_contract(name: felt252, arguments:Array<felt252>) -> ContractAddress {
 fn test_write_batch() {
 
     let mut calldata = ArrayTrait::new();
-
     let flipFee:u256 = 5;
     let treasury:felt252= 0x034e31357d1c3693bda06d04bf4c51557514eced5a8e9973bdb772f7fb978b36;
     let flipFeeLow = flipFee.low.into();
@@ -105,21 +104,29 @@ fn test_write_batch() {
 
     let flip_contract_address = deploy_contract('Flip', calldata);
 
+
     let mut calldata = ArrayTrait::new();
     let initialSupply:u256 = 100000000000000000000;
     let initialSupplyLow = initialSupply.low.into();
     let initialSupplyHigh = initialSupply.high.into();
+
     calldata.append('MOCK_ETH');
     calldata.append('METH');
     calldata.append(initialSupplyLow);
     calldata.append(initialSupplyHigh);
     calldata.append(treasury);
 
-    let contract_address = deploy_contract('ERC20', calldata);
-    let safe_dispatcher = IFlipSafeDispatcher { contract_address:flip_contract_address };
+    let erc20_contract_address = deploy_contract('ERC20', calldata);
 
-    safe_dispatcher.owner().unwrap().print();
+
+    let flip_safe_dispatcher = IFlipSafeDispatcher { contract_address:flip_contract_address };
+    let erc20_safe_dispatcher = IERC20SafeDispatcher { contract_address:erc20_contract_address };
+
+    flip_safe_dispatcher.owner().unwrap().print();
     flip_contract_address.print();
+
+    let balance_of_treasury =  erc20_safe_dispatcher.balance_of(starknet::contract_address_try_from_felt252(treasury).unwrap()).unwrap();
+    assert( balance_of_treasury == initialSupply, 'Balances dont match!');
 
     let mut request_ids: Array<felt252> = ArrayTrait::new();
     let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
@@ -131,12 +138,12 @@ fn test_write_batch() {
     fair_random_number_hashes.append(0xbf0fe55b3c2b3387e0842c3c4b3f759737b3c617cf6fdf69b52d84db79341acc);
     fair_random_number_hashes.append(0xbf0fe55b3c2b3387e0842c3c4b3f759737b3c617cf6fdf69b52d84db79341acc);
     fair_random_number_hashes.append(0xbf0fe55b3c2b3387e0842c3c4b3f759737b3c617cf6fdf69b52d84db79341acc);
-    safe_dispatcher.write_fair_rng_batch(request_ids,fair_random_number_hashes);
-    let req0 = safe_dispatcher.get_fair_rng(0).unwrap();
-    let req1 = safe_dispatcher.get_fair_rng(1).unwrap();
-    let req2 = safe_dispatcher.get_fair_rng(2).unwrap();
-    let req3 = safe_dispatcher.get_fair_rng(3).unwrap();
-    let req4 = safe_dispatcher.get_fair_rng(4).unwrap();
+    flip_safe_dispatcher.write_fair_rng_batch(request_ids,fair_random_number_hashes);
+    let req0 = flip_safe_dispatcher.get_fair_rng(0).unwrap();
+    let req1 = flip_safe_dispatcher.get_fair_rng(1).unwrap();
+    let req2 = flip_safe_dispatcher.get_fair_rng(2).unwrap();
+    let req3 = flip_safe_dispatcher.get_fair_rng(3).unwrap();
+    let req4 = flip_safe_dispatcher.get_fair_rng(4).unwrap();
     
     // req0.print();
     // req1.print();
