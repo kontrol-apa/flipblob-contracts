@@ -20,7 +20,7 @@ trait IFlip<TContractState> {
     fn set_flip_fee(ref self: TContractState, newFee:u256);
     fn get_flip_fee(self: @TContractState)-> u256;
     fn set_token_support(ref self: TContractState, tokenName:felt252, tokenAddr: ContractAddress);
-    fn is_token_support(self: @TContractState, tokenName:felt252) -> bool;
+    fn is_token_supported(self: @TContractState, tokenName:felt252) -> bool;
     fn update_treasury (ref self: TContractState, treasuryAddress: felt252);
 
 }
@@ -244,7 +244,7 @@ mod Flip {
             self.supported_erc20.write(tokenName, tokenAddr);
         }
 
-        fn is_token_support(self: @ContractState, tokenName:felt252) -> bool {
+        fn is_token_supported(self: @ContractState, tokenName:felt252) -> bool {
             let tokenAddress = self.supported_erc20.read(tokenName);
             if tokenAddress.is_zero() {
 
