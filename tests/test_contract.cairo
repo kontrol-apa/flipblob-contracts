@@ -2,6 +2,7 @@ use array::ArrayTrait;
 use result::ResultTrait;
 use option::OptionTrait;
 use traits::TryInto;
+use traits::Into;
 use starknet::ContractAddress;
 use starknet::Felt252TryIntoContractAddress;
 use cheatcodes::PreparedContract;
@@ -9,13 +10,10 @@ use debug::PrintTrait;
 use FlipBlob::flip::IFlipSafeDispatcher;
 use FlipBlob::flip::IFlipSafeDispatcherTrait;
 
-fn deploy_contract(name: felt252) -> ContractAddress {
+fn deploy_contract(name: felt252, arguments:Array<felt252>) -> ContractAddress {
     let class_hash = declare(name);
-    let mut calldata = ArrayTrait::new();
-    let treasury:felt252= 0x034e31357d1c3693bda06d04bf4c51557514eced5a8e9973bdb772f7fb978b36;
-    calldata.append(treasury);
     let prepared = PreparedContract {
-        class_hash, constructor_calldata: @calldata
+        class_hash, constructor_calldata: @arguments
     };
     deploy(prepared).unwrap()
 }
@@ -91,7 +89,19 @@ fn deploy_contract(name: felt252) -> ContractAddress {
 
 #[test]
 fn test_write_batch() {
-    let contract_address = deploy_contract('Flip');
+
+    let mut calldata = ArrayTrait::new();
+    
+    let flipFee:u256 = 5;
+    let treasury:felt252= 0x034e31357d1c3693bda06d04bf4c51557514eced5a8e9973bdb772f7fb978b36;
+    let flipFeeLow = flipFee.low.into();
+    let flipFeeHigh = flipFee.high.into();
+
+    calldata.append(treasury);
+    calldata.append(flipFeeLow);
+    calldata.append(flipFeeHigh);
+
+    let contract_address = deploy_contract('Flip',calldata);
     let safe_dispatcher = IFlipSafeDispatcher { contract_address };
     let mut request_ids: Array<felt252> = ArrayTrait::new();
     let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
