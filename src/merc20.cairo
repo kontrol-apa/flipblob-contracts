@@ -1,11 +1,39 @@
+// SPDX-License-Identifier: MIT
+// OpenZeppelin Contracts for Cairo v0.7.0 (token/erc20/erc20.cairo)
+
+use starknet::ContractAddress;
+
+#[starknet::interface]
+trait IERC20<TContractState> {
+    fn name(self: @TContractState) -> felt252;
+
+    fn symbol(self: @TContractState) -> felt252;
+
+    fn decimals(self: @TContractState) -> u8;
+
+    fn total_supply(self: @TContractState) -> u256;
+
+    fn balance_of(self: @TContractState, account: ContractAddress) -> u256;
+
+    fn allowance(self: @TContractState, owner: ContractAddress, spender: ContractAddress) -> u256;
+    fn transfer(ref self: TContractState, recipient: ContractAddress, amount: u256) -> bool;
+
+    fn transfer_from(
+        ref self: TContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256
+    ) -> bool;
+
+    fn approve(ref self: TContractState, spender: ContractAddress, amount: u256) -> bool;
+}
+
+
 #[starknet::contract]
 mod ERC20 {
     use integer::BoundedInt;
     use openzeppelin::token::erc20::interface::IERC20;
     use openzeppelin::token::erc20::interface::IERC20CamelOnly;
-    use starknet::ContractAddress;
     use starknet::get_caller_address;
     use zeroable::Zeroable;
+    use starknet::ContractAddress;
 
     #[storage]
     struct Storage {
@@ -39,25 +67,19 @@ mod ERC20 {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState
+        ref self: ContractState,
+        name: felt252,
+        symbol: felt252,
+        initial_supply: u256,
+        recipient: ContractAddress
     ) {
-        self.initializer('MOCK_WETH', 'MWETH');
-        //self._mint(recipient, initial_supply);
+        self.initializer(name, symbol);
+        self._mint(recipient, initial_supply);
     }
 
     //
     // External
     //
-    #[external(v0)]
-    #[generate_trait]
-    impl UserFunctions of UserFunctionsTrait {
-        fn mint(ref self: ContractState, recipient: ContractAddress, amount: u256) {
-            self._mint(recipient, amount);
-        }
-    }
-
-
-
     #[external(v0)]
     impl ERC20Impl of IERC20<ContractState> {
         fn name(self: @ContractState) -> felt252 {
@@ -110,7 +132,6 @@ mod ERC20 {
             true
         }
     }
-
     #[external(v0)]
     impl ERC20CamelOnlyImpl of IERC20CamelOnly<ContractState> {
         fn totalSupply(self: @ContractState) -> u256 {

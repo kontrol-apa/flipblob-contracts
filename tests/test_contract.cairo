@@ -9,6 +9,8 @@ use cheatcodes::PreparedContract;
 use debug::PrintTrait;
 use FlipBlob::flip::IFlipSafeDispatcher;
 use FlipBlob::flip::IFlipSafeDispatcherTrait;
+use FlipBlob::merc20::IERC20SafeDispatcherTrait;
+use FlipBlob::merc20::IERC20SafeDispatcher;
 
 fn deploy_contract(name: felt252, arguments:Array<felt252>) -> ContractAddress {
     let class_hash = declare(name);
@@ -91,7 +93,7 @@ fn deploy_contract(name: felt252, arguments:Array<felt252>) -> ContractAddress {
 fn test_write_batch() {
 
     let mut calldata = ArrayTrait::new();
-    
+
     let flipFee:u256 = 5;
     let treasury:felt252= 0x034e31357d1c3693bda06d04bf4c51557514eced5a8e9973bdb772f7fb978b36;
     let flipFeeLow = flipFee.low.into();
@@ -101,8 +103,13 @@ fn test_write_batch() {
     calldata.append(flipFeeLow);
     calldata.append(flipFeeHigh);
 
-    let contract_address = deploy_contract('Flip',calldata);
-    let safe_dispatcher = IFlipSafeDispatcher { contract_address };
+    let flip_contract_address = deploy_contract('Flip', calldata);
+    // let contract_address = deploy_contract('ERC20', calldata);
+    let safe_dispatcher = IFlipSafeDispatcher { contract_address:flip_contract_address };
+
+    safe_dispatcher.owner().unwrap().print();
+    flip_contract_address.print();
+
     let mut request_ids: Array<felt252> = ArrayTrait::new();
     let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
     request_ids.append(0);
@@ -120,9 +127,9 @@ fn test_write_batch() {
     let req3 = safe_dispatcher.get_fair_rng(3).unwrap();
     let req4 = safe_dispatcher.get_fair_rng(4).unwrap();
     
-    req0.print();
-    req1.print();
-    req2.print();
-    req3.print();
-    req4.print();
+    // req0.print();
+    // req1.print();
+    // req2.print();
+    // req3.print();
+    // req4.print();
  }
