@@ -128,6 +128,13 @@ fn test_write_batch() {
     let balance_of_treasury =  erc20_safe_dispatcher.balance_of(starknet::contract_address_try_from_felt252(treasury).unwrap()).unwrap();
     assert( balance_of_treasury == initialSupply, 'Balances dont match!');
 
+    flip_safe_dispatcher.set_token_support('METH', erc20_contract_address);
+    let is_supported:bool = flip_safe_dispatcher.is_token_supported('METH').unwrap();
+    is_supported.print();
+
+    let is_supported:bool = flip_safe_dispatcher.is_token_supported('ETH').unwrap();
+    is_supported.print();
+
     let mut request_ids: Array<felt252> = ArrayTrait::new();
     let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
     request_ids.append(0);
