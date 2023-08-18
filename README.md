@@ -25,14 +25,16 @@ FLIP : https://goerli.voyager.online/contract/0x04efeabc07d1ea8223a5a39c8cbbe096
 
 ### TODO:
 
-1. legacy map using felt252 -> tuple should be replaced with a struct (packed ideally)
-2. Full Ownable interface (transfer etc)
-3. Getters and setter (Customizable treasury address, wager percentage etc);
+1. ~~legacy map using felt252 -> tuple should be replaced with a struct (packed ideally)~~
+2. ~~Full Ownable interface (transfer etc)~~
+3. ~~Getters and setter (Customizable treasury address, wager percentage etc);~~
 4. Limits on wagers
 5. Hard limits on payouts against an exploit
 6. ~~Array interface for onchain random number hashes~~
 7. ~~Counters for simple indexing replacement for the backend.~~
 8. Add index check for batch write, so that only appends things after the latest fair rng hash - no overwrite should be possible.
+9. ~~Multibet~~
+10. ~~Multiple coin support~~
 
 ### Security 
 * what happens if someone sends are request for a request id without a hash ? the hash would be zero and since 0x000 is not known, it should fail.
