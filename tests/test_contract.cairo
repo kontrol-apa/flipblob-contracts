@@ -1,4 +1,4 @@
-use array::ArrayTrait;
+use array::{Span, ArrayTrait, SpanTrait};
 use result::ResultTrait;
 use option::OptionTrait;
 use traits::TryInto;
@@ -11,6 +11,7 @@ use FlipBlob::flip::IFlipSafeDispatcher;
 use FlipBlob::flip::IFlipSafeDispatcherTrait;
 use FlipBlob::merc20::IERC20SafeDispatcherTrait;
 use FlipBlob::merc20::IERC20SafeDispatcher;
+use starknet::get_caller_address;
 
 fn deploy_contract(name: felt252, arguments:Array<felt252>) -> ContractAddress {
     let class_hash = declare(name);
@@ -20,74 +21,40 @@ fn deploy_contract(name: felt252, arguments:Array<felt252>) -> ContractAddress {
     deploy(prepared).unwrap()
 }
 
+fn prepare_rng(ref flip_safe_dispatcher: IFlipSafeDispatcher, ref request_ids : Array<felt252>, ref fair_random_number_hashes : Array<u256>, ref random_numbers : Array<u256>){
+    let mut index = 0;
+    let SIZE = 10;
+    loop {
+        let random_number = flip_safe_dispatcher.calculate_keccak(index.into()).unwrap();
+        let hash = flip_safe_dispatcher.calculate_keccak(random_number).unwrap();
+        random_numbers.append(random_number);
+        fair_random_number_hashes.append(hash);
+        request_ids.append(index.into());
 
-//#[test]
-//fn test_init_request() {
-//    let contract_address = deploy_contract('Flip');
-//    let contract_address2 = deploy_contract('ERC20');
-//    contract_address.print();
-//    contract_address2.print();
-//    let safe_dispatcher = IFlipSafeDispatcher { contract_address };
-//    let first_request_id = safe_dispatcher.get_next_request_id().unwrap();
-//    
-//    assert( first_request_id == 0, 'Request id wrong');
-//    safe_dispatcher.issue_request(1,19999999912312312312312322323223232323233,1).unwrap();
-//    let second_request_id = safe_dispatcher.get_next_request_id().unwrap();
-//    second_request_id.print();
-//    let (a,b,c,d) = safe_dispatcher.get_request(0).unwrap();
-//    a.print();
-//    b.print();
-//    c.print();
-//    d.print();
-//
-//    assert( second_request_id == 1, 'Request id wrong');
-//
-//}
-//    // rng = 11231231423423423423423231231233
-//    // hash 0xbf0fe55b3c2b3387e0842c3c4b3f759737b3c617cf6fdf69b52d84db79341acc
-//    // 86419839744980627174922957242311545107819912114511241305104172346493761755852
-//#[test]
-//fn test_keccak() {
-//    let contract_address = deploy_contract('Flip');
-//
-//    let safe_dispatcher = IFlipSafeDispatcher { contract_address };
-//    let keccak = safe_dispatcher.calculate_keccak(86419839744980627174922957242311545107819912114511241305104172346493761755852).unwrap();
-//    let onwer = safe_dispatcher.owner().unwrap();
-//    onwer.print();
-//    //let x : felt252 = keccak.try_into().unwrap();
-//    keccak.print();
-//}
-//
-//#[test]
-//fn test_full() {
-//    let contract_address = deploy_contract('Flip');
-//    let safe_dispatcher = IFlipSafeDispatcher { contract_address };
-//    //write the hash of the random number
-//    let addy: ContractAddress =
-//                starknet::contract_address_const::<0x00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3>();
-//    start_prank(contract_address, addy);
-//    match safe_dispatcher.write_fair_rng(0,0xbf0fe55b3c2b3387e0842c3c4b3f759737b3c617cf6fdf69b52d84db79341acc) {
-//        //Result::Ok(_) => panic_with_felt252('Should have panicked'),
-//        Result::Ok(_) => 'done'.print(),
-//        Result::Err(panic_data) => {
-//            assert(*panic_data.at(0) == 'Caller is not the owner', *panic_data.at(0));
-//        }
-//    };
-//     stop_prank(contract_address);
-//    // issue a request times : 1, amount in wei : 19999999912312312312312322323223232323233, toss_prediction : 1
-//    safe_dispatcher.issue_request(1,19999999912312312312312322323223232323233,1).unwrap();
-//
-    // match safe_dispatcher.finalize_request(0,11231231423423423423423231231233) {
-    //    //Result::Ok(_) => panic_with_felt252('Should have panicked'),
-    //    Result::Ok(_) => 'done'.print(),
-    //    Result::Err(panic_data) => {
-    //        assert(*panic_data.at(0) == 'Wrong number', *panic_data.at(0));
+        if index == SIZE {
+            break;
+        } else {
+            index += 1;
+        };
+    };
+}
 
-    //    }
-//    };
-//    //let keccak = safe_dispatcher.calculate_keccak(86419839744980627174922957242311545107819912114511241305104172346493761755852).unwrap();
-//}
-//
+fn arr_copy(mut vals: Span<u32>) -> u32 {
+    let mut sum = 0_u32;
+
+    loop {
+        match vals.pop_front() {
+            Option::Some(v) => {
+                sum += *v;
+            },
+            Option::None(_) => {
+                break sum;
+            }
+        };
+    }
+}
+
+
 
 #[test]
 fn test_write_batch() {
@@ -118,10 +85,9 @@ fn test_write_batch() {
 
     let erc20_contract_address = deploy_contract('ERC20', calldata);
 
-    let flip_safe_dispatcher = IFlipSafeDispatcher { contract_address:flip_contract_address };
+    let mut flip_safe_dispatcher = IFlipSafeDispatcher { contract_address:flip_contract_address };
     let erc20_safe_dispatcher = IERC20SafeDispatcher { contract_address:erc20_contract_address };
 
-    flip_safe_dispatcher.owner().unwrap().print();
 
     let balance_of_treasury =  erc20_safe_dispatcher.balance_of(starknet::contract_address_try_from_felt252(treasury).unwrap()).unwrap();
     assert( balance_of_treasury == initialSupply, 'Balances dont match!');
@@ -140,37 +106,48 @@ fn test_write_batch() {
     let mut request_ids: Array<felt252> = ArrayTrait::new();
     let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
     let mut random_numbers = ArrayTrait::<u256>::new();
-    let mut index = 0;
-    let SIZE = 10;
-    loop {
-        let random_number = flip_safe_dispatcher.calculate_keccak(index.into()).unwrap();
-        let hash = flip_safe_dispatcher.calculate_keccak(random_number).unwrap();
-        random_numbers.append(random_number);
-        fair_random_number_hashes.append(hash);
-        request_ids.append(index.into());
-
-        if index == SIZE {
-            break;
-        } else {
-            index += 1;
-        };
-    };
+    prepare_rng(ref flip_safe_dispatcher, ref request_ids, ref fair_random_number_hashes, ref random_numbers);
     
-    flip_safe_dispatcher.write_fair_rng_batch(request_ids,fair_random_number_hashes);
 
-    // flip_safe_dispatcher.issue_request(1,10,1,'METH');
+    flip_safe_dispatcher.write_fair_rng_batch(request_ids.span(), fair_random_number_hashes);
+    let myAddress = flip_safe_dispatcher.owner().unwrap();
+
+    start_prank(erc20_contract_address, myAddress);
+    erc20_safe_dispatcher.approve(flip_contract_address, 1000000000000000000);
+    erc20_safe_dispatcher.mint(myAddress, 1000000000000000000);
+    stop_prank(erc20_contract_address);
+
+    start_prank(erc20_contract_address, starknet::contract_address_try_from_felt252(treasury).unwrap());
+    erc20_safe_dispatcher.approve(flip_contract_address, 1000000000000000000);
+    stop_prank(erc20_contract_address);
 
 
 
-    // let req0 = flip_safe_dispatcher.get_fair_rng(0).unwrap();
-    // let req1 = flip_safe_dispatcher.get_fair_rng(1).unwrap();
-    // let req2 = flip_safe_dispatcher.get_fair_rng(2).unwrap();
-    // let req3 = flip_safe_dispatcher.get_fair_rng(3).unwrap();
-    // let req4 = flip_safe_dispatcher.get_fair_rng(4).unwrap();
-    
-    // req0.print();
-    // req1.print();
-    // req2.print();
-    // req3.print();
-    // req4.print();
+
+
+    let index = 0;
+    // erc20_safe_dispatcher.balance_of(myAddress).unwrap().print(); 
+    flip_safe_dispatcher.issue_request(1,1000000,1,'METH');
+    // erc20_safe_dispatcher.balance_of(myAddress).unwrap().print(); 
+
+    // flip_safe_dispatcher.is_token_supported('METH').unwrap().print();
+    // erc20_safe_dispatcher.balance_of(myAddress).unwrap().print(); 
+
+   let toss_result = (*random_numbers.at(index)) % 2;
+    let mut success = false;
+    if toss_result == 1 {
+        success = true;
+    }
+    success.print();
+     match flip_safe_dispatcher.finalize_request(*request_ids.at(index), *random_numbers.at(index) ) {
+       Result::Ok(_) => 'done'.print(),
+       Result::Err(panic_data) => {
+            'yarrak'.print();
+            assert(*panic_data.at(0) == 'Request already finalized', *panic_data.at(0));
+
+       }
+    }
+
+
+
  }

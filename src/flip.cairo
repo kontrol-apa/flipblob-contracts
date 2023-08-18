@@ -14,7 +14,7 @@ trait IFlip<TContractState> {
     fn get_last_finalized_request_id(self: @TContractState) -> felt252;
     fn calculate_keccak(self:  @TContractState, num : u256) -> u256;
     fn write_fair_rng(ref self: TContractState, request_id : felt252, fair_random_number_hash : u256);
-    fn write_fair_rng_batch(ref self: TContractState, request_ids : Array<felt252>, fair_random_number_hashes : Array<u256>);
+    fn write_fair_rng_batch(ref self: TContractState, request_ids : Span<felt252>, fair_random_number_hashes : Array<u256>);
     fn get_fair_rng(self:  @TContractState, request_id : felt252) -> u256;
     fn owner(self: @TContractState) -> ContractAddress;
     fn set_flip_fee(ref self: TContractState, newFee:u256);
@@ -143,7 +143,7 @@ mod Flip {
             InternalImpl::assert_only_owner(@ownable);
             self.fair_random_numbers.write(request_id,fair_random_number_hash);
         }
-        fn write_fair_rng_batch(ref self: ContractState, request_ids : Array<felt252>, fair_random_number_hashes : Array<u256>){
+        fn write_fair_rng_batch(ref self: ContractState, request_ids : Span<felt252>, fair_random_number_hashes : Array<u256>){
             assert(request_ids.len() == fair_random_number_hashes.len(),'Sizes must match');
 
             let mut index:usize = 0;
@@ -205,10 +205,15 @@ mod Flip {
 
             assert(res == fair_random_number_hash, 'Wrong number');
             assert(request_status == 0, 'Request already finalized');
+            
 
             self.requestStatus.write(requestId, 1);
-            let toss_result = rng % 2;
-            let success = toss_result == toss_result_prediction;
+            let toss_result:u256 = rng % 2;
+            let mut success = false;
+            assert(toss_result == toss_result_prediction, 'AYNI SAYI');
+            if toss_result == toss_result_prediction {
+                success = true;
+            }
             if (success) {
                 let user_address_felt252: felt252 = starknet::contract_address_to_felt252(user_address);
 
@@ -225,7 +230,8 @@ mod Flip {
                         panic_with_felt252('Should Not Execute');  // Should never execute this line
                     },
                 }
-            }
+            };
+
         }
 
         fn set_flip_fee(ref self: ContractState, newFee:u256) {
