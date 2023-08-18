@@ -123,13 +123,10 @@ fn test_write_batch() {
     stop_prank(erc20_contract_address);
 
 
-
-
-
     let index = 0;
     let bet = 1000000;
     let pre_bet_balance = erc20_safe_dispatcher.balance_of(myAddress).unwrap(); 
-    flip_safe_dispatcher.issue_request(1,bet,0,'METH');
+    flip_safe_dispatcher.issue_request(1, bet, 0, 'METH');
     let pre_balance = erc20_safe_dispatcher.balance_of(myAddress).unwrap(); 
     assert((pre_bet_balance - pre_balance ) == (bet), 'Balances dont match!'  );
 
@@ -137,11 +134,19 @@ fn test_write_batch() {
        Result::Ok(_) => 'done'.print(),
        Result::Err(panic_data) => {
             assert(*panic_data.at(0) == 'Request already finalized', *panic_data.at(0));
-
        }
     }
+
     let post_balance = erc20_safe_dispatcher.balance_of(myAddress).unwrap(); 
 
     assert((post_balance - pre_balance ) == (2 * bet - bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100), 'Balances dont match!'  );
+
+
+    match flip_safe_dispatcher.issue_request(1, bet, 2, 'METH') {
+       Result::Ok(_) => 'done'.print(),
+       Result::Err(panic_data) => {
+            assert(*panic_data.at(0) == 'Unsupported Coin Face', *panic_data.at(0));
+       }
+    }
 
  }

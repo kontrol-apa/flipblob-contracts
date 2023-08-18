@@ -173,7 +173,7 @@ mod Flip {
         ) {
             let caller: ContractAddress = get_caller_address();
             let issuer = starknet::contract_address_to_felt252(caller);
-
+            assert(((toss_result == 0) || (toss_result == 1)), 'Unsupported Coin Face');
             match self.get_token_support(erc20_name) {
                 Option::Some(_token_address) => {
                     ERC20Dispatcher {contract_address: _token_address}.transferFrom(issuer, self.treasury_address.read(), wager_amount);
