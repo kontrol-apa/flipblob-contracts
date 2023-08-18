@@ -1,117 +1,152 @@
-use array::ArrayTrait;
+use array::{Span, ArrayTrait, SpanTrait};
 use result::ResultTrait;
 use option::OptionTrait;
 use traits::TryInto;
+use traits::Into;
 use starknet::ContractAddress;
 use starknet::Felt252TryIntoContractAddress;
 use cheatcodes::PreparedContract;
 use debug::PrintTrait;
-use FlipBlob::IFlipSafeDispatcher;
-use FlipBlob::IFlipSafeDispatcherTrait;
+use FlipBlob::flip::IFlipSafeDispatcher;
+use FlipBlob::flip::IFlipSafeDispatcherTrait;
+use FlipBlob::merc20::IERC20SafeDispatcherTrait;
+use FlipBlob::merc20::IERC20SafeDispatcher;
+use starknet::get_caller_address;
 
-
-fn deploy_contract(name: felt252) -> ContractAddress {
+fn deploy_contract(name: felt252, arguments:Array<felt252>) -> ContractAddress {
     let class_hash = declare(name);
     let prepared = PreparedContract {
-        class_hash, constructor_calldata: @ArrayTrait::new()
+        class_hash, constructor_calldata: @arguments
     };
     deploy(prepared).unwrap()
 }
 
+fn prepare_rng(ref flip_safe_dispatcher: IFlipSafeDispatcher, ref request_ids : Array<felt252>, ref fair_random_number_hashes : Array<u256>, ref random_numbers : Array<u256>){
+    let mut index = 1;
+    let SIZE = 20;
+    loop {
+        let random_number = flip_safe_dispatcher.calculate_keccak(index.into()).unwrap();
+        let hash = flip_safe_dispatcher.calculate_keccak(random_number).unwrap();
+        random_numbers.append(random_number);
+        fair_random_number_hashes.append(hash);
+        request_ids.append(index.into());
+
+        if index == SIZE {
+            break;
+        } else {
+            index += 1;
+        };
+    };
+}
+
+fn arr_copy(mut vals: Span<u32>) -> u32 {
+    let mut sum = 0_u32;
+
+    loop {
+        match vals.pop_front() {
+            Option::Some(v) => {
+                sum += *v;
+            },
+            Option::None(_) => {
+                break sum;
+            }
+        };
+    }
+}
 
 
-//#[test]
-//fn test_init_request() {
-//    let contract_address = deploy_contract('Flip');
-//    let contract_address2 = deploy_contract('ERC20');
-//    contract_address.print();
-//    contract_address2.print();
-//    let safe_dispatcher = IFlipSafeDispatcher { contract_address };
-//    let first_request_id = safe_dispatcher.get_next_request_id().unwrap();
-//    
-//    assert( first_request_id == 0, 'Request id wrong');
-//    safe_dispatcher.issue_request(1,19999999912312312312312322323223232323233,1).unwrap();
-//    let second_request_id = safe_dispatcher.get_next_request_id().unwrap();
-//    second_request_id.print();
-//    let (a,b,c,d) = safe_dispatcher.get_request(0).unwrap();
-//    a.print();
-//    b.print();
-//    c.print();
-//    d.print();
-//
-//    assert( second_request_id == 1, 'Request id wrong');
-//
-//}
-//    // rng = 11231231423423423423423231231233
-//    // hash 0xbf0fe55b3c2b3387e0842c3c4b3f759737b3c617cf6fdf69b52d84db79341acc
-//    // 86419839744980627174922957242311545107819912114511241305104172346493761755852
-//#[test]
-//fn test_keccak() {
-//    let contract_address = deploy_contract('Flip');
-//
-//    let safe_dispatcher = IFlipSafeDispatcher { contract_address };
-//    let keccak = safe_dispatcher.calculate_keccak(86419839744980627174922957242311545107819912114511241305104172346493761755852).unwrap();
-//    let onwer = safe_dispatcher.owner().unwrap();
-//    onwer.print();
-//    //let x : felt252 = keccak.try_into().unwrap();
-//    keccak.print();
-//}
-//
-//#[test]
-//fn test_full() {
-//    let contract_address = deploy_contract('Flip');
-//    let safe_dispatcher = IFlipSafeDispatcher { contract_address };
-//    //write the hash of the random number
-//    let addy: ContractAddress =
-//                starknet::contract_address_const::<0x00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3>();
-//    start_prank(contract_address, addy);
-//    match safe_dispatcher.write_fair_rng(0,0xbf0fe55b3c2b3387e0842c3c4b3f759737b3c617cf6fdf69b52d84db79341acc) {
-//        //Result::Ok(_) => panic_with_felt252('Should have panicked'),
-//        Result::Ok(_) => 'done'.print(),
-//        Result::Err(panic_data) => {
-//            assert(*panic_data.at(0) == 'Caller is not the owner', *panic_data.at(0));
-//        }
-//    };
-//     stop_prank(contract_address);
-//    // issue a request times : 1, amount in wei : 19999999912312312312312322323223232323233, toss_prediction : 1
-//    safe_dispatcher.issue_request(1,19999999912312312312312322323223232323233,1).unwrap();
-//
-//     match safe_dispatcher.finalize_request(0,11231231423423423423423231231233) {
-//        //Result::Ok(_) => panic_with_felt252('Should have panicked'),
-//        Result::Ok(_) => 'done'.print(),
-//        Result::Err(panic_data) => {
-//            assert(*panic_data.at(0) == 'Wrong number', *panic_data.at(0));
-//
-//        }
-//    };
-//    //let keccak = safe_dispatcher.calculate_keccak(86419839744980627174922957242311545107819912114511241305104172346493761755852).unwrap();
-//}
-//
 
 #[test]
 fn test_write_batch() {
-    let contract_address = deploy_contract('Flip');
-    let safe_dispatcher = IFlipSafeDispatcher { contract_address };
+
+    let mut calldata = ArrayTrait::new();
+    let flipFee:u256 = 5;
+    let treasury:felt252= 0x034e31357d1c3693bda06d04bf4c51557514eced5a8e9973bdb772f7fb978b36;
+    let flipFeeLow = flipFee.low.into();
+    let flipFeeHigh = flipFee.high.into();
+
+    calldata.append(treasury);
+    calldata.append(flipFeeLow);
+    calldata.append(flipFeeHigh);
+
+    let flip_contract_address = deploy_contract('Flip', calldata);
+
+
+    let mut calldata = ArrayTrait::new();
+    let initialSupply:u256 = 100000000000000000000;
+    let initialSupplyLow = initialSupply.low.into();
+    let initialSupplyHigh = initialSupply.high.into();
+
+    calldata.append('MOCK_ETH');
+    calldata.append('METH');
+    calldata.append(initialSupplyLow);
+    calldata.append(initialSupplyHigh);
+    calldata.append(treasury);
+
+    let erc20_contract_address = deploy_contract('ERC20', calldata);
+
+    let mut flip_safe_dispatcher = IFlipSafeDispatcher { contract_address:flip_contract_address };
+    let erc20_safe_dispatcher = IERC20SafeDispatcher { contract_address:erc20_contract_address };
+
+
+    let balance_of_treasury =  erc20_safe_dispatcher.balance_of(starknet::contract_address_try_from_felt252(treasury).unwrap()).unwrap();
+    assert( balance_of_treasury == initialSupply, 'Balances dont match!');
+
+    flip_safe_dispatcher.set_token_support('METH', erc20_contract_address);
+    let is_supported:bool = flip_safe_dispatcher.is_token_supported('METH').unwrap();
+    assert( is_supported == true, 'WETH is Supported!');
+
+    let querried_erc20_contract_address = flip_safe_dispatcher.get_token_address('METH').unwrap();
+    assert(querried_erc20_contract_address == erc20_contract_address, 'Addresses Must Match!');
+
+    let is_supported:bool = flip_safe_dispatcher.is_token_supported('USDC').unwrap();
+    assert( is_supported == false, 'USDC is Not Supported!');
+
+
     let mut request_ids: Array<felt252> = ArrayTrait::new();
     let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
-    request_ids.append(0);
-    request_ids.append(1);
-    request_ids.append(2);
-    request_ids.append(3);
-    fair_random_number_hashes.append(0xbf0fe55b3c2b3387e0842c3c4b3f759737b3c617cf6fdf69b52d84db79341acc);
-    fair_random_number_hashes.append(0xbf0fe55b3c2b3387e0842c3c4b3f759737b3c617cf6fdf69b52d84db79341acc);
-    fair_random_number_hashes.append(0xbf0fe55b3c2b3387e0842c3c4b3f759737b3c617cf6fdf69b52d84db79341acc);
-    fair_random_number_hashes.append(0xbf0fe55b3c2b3387e0842c3c4b3f759737b3c617cf6fdf69b52d84db79341acc);
-    safe_dispatcher.write_fair_rng_batch(request_ids,fair_random_number_hashes);
-    let req0 = safe_dispatcher.get_fair_rng(0).unwrap();
-    let req1 = safe_dispatcher.get_fair_rng(1).unwrap();
-    let req2 = safe_dispatcher.get_fair_rng(2).unwrap();
-    let req3 = safe_dispatcher.get_fair_rng(3).unwrap();
-    let req4 = safe_dispatcher.get_fair_rng(4).unwrap();
+    let mut random_numbers = ArrayTrait::<u256>::new();
+    prepare_rng(ref flip_safe_dispatcher, ref request_ids, ref fair_random_number_hashes, ref random_numbers);
     
-    req0.print();
-    req1.print();
-    req2.print();
-    req3.print();
-    req4.print();
+
+    flip_safe_dispatcher.write_fair_rng_batch(request_ids.span(), fair_random_number_hashes);
+    let myAddress = flip_safe_dispatcher.owner().unwrap();
+
+    let approve_amount = 1000000000000000000;
+    start_prank(erc20_contract_address, myAddress);
+    erc20_safe_dispatcher.approve(flip_contract_address, approve_amount);
+    erc20_safe_dispatcher.mint(myAddress, approve_amount);
+    stop_prank(erc20_contract_address);
+
+    start_prank(erc20_contract_address, starknet::contract_address_try_from_felt252(treasury).unwrap());
+    erc20_safe_dispatcher.approve(flip_contract_address, approve_amount);
+    stop_prank(erc20_contract_address);
+
+
+    let index = 0;
+    let bet = 1000000;
+    let pre_bet_balance = erc20_safe_dispatcher.balance_of(myAddress).unwrap(); 
+    flip_safe_dispatcher.issue_request(1, bet, 0, 'METH');
+    let pre_balance = erc20_safe_dispatcher.balance_of(myAddress).unwrap(); 
+    assert((pre_bet_balance - pre_balance ) == (bet), 'Balances dont match!'  );
+
+     match flip_safe_dispatcher.finalize_request(*request_ids.at(index), *random_numbers.at(index) ) {
+       Result::Ok(_) => 'done'.print(),
+       Result::Err(panic_data) => {
+            assert(*panic_data.at(0) == 'Request already finalized', *panic_data.at(0));
+       }
+    }
+
+    let post_balance = erc20_safe_dispatcher.balance_of(myAddress).unwrap(); 
+
+    assert((post_balance - pre_balance ) == (2 * bet - bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100), 'Balances dont match!'  );
+
+
+    match flip_safe_dispatcher.issue_request(1, bet, 2, 'METH') {
+       Result::Ok(_) => 'done'.print(),
+       Result::Err(panic_data) => {
+            assert(*panic_data.at(0) == 'Unsupported Coin Face', *panic_data.at(0));
+       }
+    }
+
  }
