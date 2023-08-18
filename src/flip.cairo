@@ -21,6 +21,7 @@ trait IFlip<TContractState> {
     fn get_flip_fee(self: @TContractState)-> u256;
     fn set_token_support(ref self: TContractState, tokenName:felt252, tokenAddr: ContractAddress);
     fn is_token_supported(self: @TContractState, tokenName:felt252) -> bool;
+    fn get_token_address(self: @TContractState, tokenName:felt252) -> ContractAddress;
     fn update_treasury (ref self: TContractState, treasuryAddress: felt252);
 
 }
@@ -254,6 +255,11 @@ mod Flip {
                 return true;
             }
         }
+
+        fn get_token_address(self: @ContractState, tokenName:felt252) -> ContractAddress {
+            self.supported_erc20.read(tokenName)
+        }
+
 
         fn update_treasury (ref self: ContractState, treasuryAddress: felt252) {
             let ownable = Ownable::unsafe_new_contract_state(); 
