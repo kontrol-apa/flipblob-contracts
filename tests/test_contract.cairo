@@ -118,22 +118,24 @@ fn test_write_batch() {
 
     let erc20_contract_address = deploy_contract('ERC20', calldata);
 
-
     let flip_safe_dispatcher = IFlipSafeDispatcher { contract_address:flip_contract_address };
     let erc20_safe_dispatcher = IERC20SafeDispatcher { contract_address:erc20_contract_address };
 
     flip_safe_dispatcher.owner().unwrap().print();
-    flip_contract_address.print();
 
     let balance_of_treasury =  erc20_safe_dispatcher.balance_of(starknet::contract_address_try_from_felt252(treasury).unwrap()).unwrap();
     assert( balance_of_treasury == initialSupply, 'Balances dont match!');
 
     flip_safe_dispatcher.set_token_support('METH', erc20_contract_address);
     let is_supported:bool = flip_safe_dispatcher.is_token_supported('METH').unwrap();
-    is_supported.print();
+    assert( is_supported == true, 'WETH is Supported!');
 
-    let is_supported:bool = flip_safe_dispatcher.is_token_supported('ETH').unwrap();
-    is_supported.print();
+    let querried_erc20_contract_address = flip_safe_dispatcher.get_token_address('METH').unwrap();
+    assert(querried_erc20_contract_address == erc20_contract_address, 'Addresses Must Match!');
+
+    let is_supported:bool = flip_safe_dispatcher.is_token_supported('USDC').unwrap();
+    assert( is_supported == false, 'USDC is Not Supported!');
+
 
     let mut request_ids: Array<felt252> = ArrayTrait::new();
     let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
@@ -155,15 +157,20 @@ fn test_write_batch() {
     };
     
     flip_safe_dispatcher.write_fair_rng_batch(request_ids,fair_random_number_hashes);
-    let req0 = flip_safe_dispatcher.get_fair_rng(0).unwrap();
-    let req1 = flip_safe_dispatcher.get_fair_rng(1).unwrap();
-    let req2 = flip_safe_dispatcher.get_fair_rng(2).unwrap();
-    let req3 = flip_safe_dispatcher.get_fair_rng(3).unwrap();
-    let req4 = flip_safe_dispatcher.get_fair_rng(4).unwrap();
+
+    // flip_safe_dispatcher.issue_request(1,10,1,'METH');
+
+
+
+    // let req0 = flip_safe_dispatcher.get_fair_rng(0).unwrap();
+    // let req1 = flip_safe_dispatcher.get_fair_rng(1).unwrap();
+    // let req2 = flip_safe_dispatcher.get_fair_rng(2).unwrap();
+    // let req3 = flip_safe_dispatcher.get_fair_rng(3).unwrap();
+    // let req4 = flip_safe_dispatcher.get_fair_rng(4).unwrap();
     
-    req0.print();
-    req1.print();
-    req2.print();
-    req3.print();
-    req4.print();
+    // req0.print();
+    // req1.print();
+    // req2.print();
+    // req3.print();
+    // req4.print();
  }
