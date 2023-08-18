@@ -179,7 +179,7 @@ mod Flip {
                     ERC20Dispatcher {contract_address: _token_address}.transferFrom(issuer, self.treasury_address.read(), wager_amount);
                     let current_request_id: felt252 = self.next_request_id.read();
                     self.next_request_id.write(current_request_id + 1); // increment
-                    self.requests.write(current_request_id, requestMetadata {userAddress:caller, times:times, wager_amount: wager_amount, chosen_coin_face:toss_result, token: erc20_name });
+                    self.requests.write(current_request_id, requestMetadata {userAddress:caller, times:times, wager_amount: wager_amount, chosen_coin_face: toss_result, token: erc20_name });
                     self.emit(RequestIssued { wager_amount :wager_amount, issuer :  issuer, toss_prediction : toss_result, times : times, token: erc20_name});
                 },
                 Option::None(()) => {
@@ -210,7 +210,6 @@ mod Flip {
             self.requestStatus.write(requestId, 1);
             let toss_result:u256 = rng % 2;
             let mut success = false;
-            assert(toss_result == toss_result_prediction, 'AYNI SAYI');
             if toss_result == toss_result_prediction {
                 success = true;
             }
@@ -230,7 +229,7 @@ mod Flip {
                         panic_with_felt252('Should Not Execute');  // Should never execute this line
                     },
                 }
-            };
+            }
 
         }
 

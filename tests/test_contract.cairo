@@ -22,8 +22,8 @@ fn deploy_contract(name: felt252, arguments:Array<felt252>) -> ContractAddress {
 }
 
 fn prepare_rng(ref flip_safe_dispatcher: IFlipSafeDispatcher, ref request_ids : Array<felt252>, ref fair_random_number_hashes : Array<u256>, ref random_numbers : Array<u256>){
-    let mut index = 0;
-    let SIZE = 10;
+    let mut index = 1;
+    let SIZE = 20;
     loop {
         let random_number = flip_safe_dispatcher.calculate_keccak(index.into()).unwrap();
         let hash = flip_safe_dispatcher.calculate_keccak(random_number).unwrap();
@@ -112,13 +112,14 @@ fn test_write_batch() {
     flip_safe_dispatcher.write_fair_rng_batch(request_ids.span(), fair_random_number_hashes);
     let myAddress = flip_safe_dispatcher.owner().unwrap();
 
+    let approve_amount = 1000000000000000000;
     start_prank(erc20_contract_address, myAddress);
-    erc20_safe_dispatcher.approve(flip_contract_address, 1000000000000000000);
-    erc20_safe_dispatcher.mint(myAddress, 1000000000000000000);
+    erc20_safe_dispatcher.approve(flip_contract_address, approve_amount);
+    erc20_safe_dispatcher.mint(myAddress, approve_amount);
     stop_prank(erc20_contract_address);
 
     start_prank(erc20_contract_address, starknet::contract_address_try_from_felt252(treasury).unwrap());
-    erc20_safe_dispatcher.approve(flip_contract_address, 1000000000000000000);
+    erc20_safe_dispatcher.approve(flip_contract_address, approve_amount);
     stop_prank(erc20_contract_address);
 
 
@@ -126,28 +127,21 @@ fn test_write_batch() {
 
 
     let index = 0;
-    // erc20_safe_dispatcher.balance_of(myAddress).unwrap().print(); 
-    flip_safe_dispatcher.issue_request(1,1000000,1,'METH');
-    // erc20_safe_dispatcher.balance_of(myAddress).unwrap().print(); 
+    let bet = 1000000;
+    let pre_bet_balance = erc20_safe_dispatcher.balance_of(myAddress).unwrap(); 
+    flip_safe_dispatcher.issue_request(1,bet,0,'METH');
+    let pre_balance = erc20_safe_dispatcher.balance_of(myAddress).unwrap(); 
+    assert((pre_bet_balance - pre_balance ) == (bet), 'Balances dont match!'  );
 
-    // flip_safe_dispatcher.is_token_supported('METH').unwrap().print();
-    // erc20_safe_dispatcher.balance_of(myAddress).unwrap().print(); 
-
-   let toss_result = (*random_numbers.at(index)) % 2;
-    let mut success = false;
-    if toss_result == 1 {
-        success = true;
-    }
-    success.print();
      match flip_safe_dispatcher.finalize_request(*request_ids.at(index), *random_numbers.at(index) ) {
        Result::Ok(_) => 'done'.print(),
        Result::Err(panic_data) => {
-            'yarrak'.print();
             assert(*panic_data.at(0) == 'Request already finalized', *panic_data.at(0));
 
        }
     }
+    let post_balance = erc20_safe_dispatcher.balance_of(myAddress).unwrap(); 
 
-
+    assert((post_balance - pre_balance ) == (2 * bet - bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100), 'Balances dont match!'  );
 
  }
