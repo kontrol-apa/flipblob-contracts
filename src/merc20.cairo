@@ -23,6 +23,9 @@ trait IERC20<TContractState> {
     ) -> bool;
 
     fn approve(ref self: TContractState, spender: ContractAddress, amount: u256) -> bool;
+
+    fn mint(ref self: TContractState, recipient: ContractAddress, amount: u256) ;
+
 }
 
 
@@ -178,6 +181,11 @@ mod ERC20 {
         ref self: ContractState, spender: ContractAddress, subtractedValue: u256
     ) -> bool {
         decrease_allowance(ref self, spender, subtractedValue)
+    }
+
+    #[external(v0)]
+    fn mint(ref self: ContractState, recipient: ContractAddress, amount: u256) {
+        self._mint(recipient, amount);
     }
 
     //
