@@ -77,13 +77,13 @@ fn deploy_contract(name: felt252, arguments:Array<felt252>) -> ContractAddress {
 //    // issue a request times : 1, amount in wei : 19999999912312312312312322323223232323233, toss_prediction : 1
 //    safe_dispatcher.issue_request(1,19999999912312312312312322323223232323233,1).unwrap();
 //
-//     match safe_dispatcher.finalize_request(0,11231231423423423423423231231233) {
-//        //Result::Ok(_) => panic_with_felt252('Should have panicked'),
-//        Result::Ok(_) => 'done'.print(),
-//        Result::Err(panic_data) => {
-//            assert(*panic_data.at(0) == 'Wrong number', *panic_data.at(0));
-//
-//        }
+    // match safe_dispatcher.finalize_request(0,11231231423423423423423231231233) {
+    //    //Result::Ok(_) => panic_with_felt252('Should have panicked'),
+    //    Result::Ok(_) => 'done'.print(),
+    //    Result::Err(panic_data) => {
+    //        assert(*panic_data.at(0) == 'Wrong number', *panic_data.at(0));
+
+    //    }
 //    };
 //    //let keccak = safe_dispatcher.calculate_keccak(86419839744980627174922957242311545107819912114511241305104172346493761755852).unwrap();
 //}
@@ -137,14 +137,23 @@ fn test_write_batch() {
 
     let mut request_ids: Array<felt252> = ArrayTrait::new();
     let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
-    request_ids.append(0);
-    request_ids.append(1);
-    request_ids.append(2);
-    request_ids.append(3);
-    fair_random_number_hashes.append(0xbf0fe55b3c2b3387e0842c3c4b3f759737b3c617cf6fdf69b52d84db79341acc);
-    fair_random_number_hashes.append(0xbf0fe55b3c2b3387e0842c3c4b3f759737b3c617cf6fdf69b52d84db79341acc);
-    fair_random_number_hashes.append(0xbf0fe55b3c2b3387e0842c3c4b3f759737b3c617cf6fdf69b52d84db79341acc);
-    fair_random_number_hashes.append(0xbf0fe55b3c2b3387e0842c3c4b3f759737b3c617cf6fdf69b52d84db79341acc);
+    let mut random_numbers = ArrayTrait::<u256>::new();
+    let mut index = 0;
+    let SIZE = 10;
+    loop {
+        let random_number = flip_safe_dispatcher.calculate_keccak(index.into()).unwrap();
+        let hash = flip_safe_dispatcher.calculate_keccak(random_number).unwrap();
+        random_numbers.append(random_number);
+        fair_random_number_hashes.append(hash);
+        request_ids.append(index.into());
+
+        if index == SIZE {
+            break;
+        } else {
+            index += 1;
+        };
+    };
+    
     flip_safe_dispatcher.write_fair_rng_batch(request_ids,fair_random_number_hashes);
     let req0 = flip_safe_dispatcher.get_fair_rng(0).unwrap();
     let req1 = flip_safe_dispatcher.get_fair_rng(1).unwrap();
@@ -152,9 +161,9 @@ fn test_write_batch() {
     let req3 = flip_safe_dispatcher.get_fair_rng(3).unwrap();
     let req4 = flip_safe_dispatcher.get_fair_rng(4).unwrap();
     
-    // req0.print();
-    // req1.print();
-    // req2.print();
-    // req3.print();
-    // req4.print();
+    req0.print();
+    req1.print();
+    req2.print();
+    req3.print();
+    req4.print();
  }
