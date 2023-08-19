@@ -78,13 +78,15 @@ mod Flip {
         issuer : felt252,
         toss_prediction : u256,
         times : u256,
-        token : felt252
+        token : felt252,
+        request_id : felt252
     }
 
     #[derive(Drop, starknet::Event)]
     struct RequestFinalized {
         request_id : felt252,
-        success : bool
+        success : bool,
+        profit : u256
 
     }
 
@@ -180,7 +182,7 @@ mod Flip {
                     let current_request_id: felt252 = self.next_request_id.read();
                     self.next_request_id.write(current_request_id + 1); // increment
                     self.requests.write(current_request_id, requestMetadata {userAddress:caller, times:times, wager_amount: wager_amount, chosen_coin_face: toss_result, token: erc20_name });
-                    self.emit(RequestIssued { wager_amount :wager_amount, issuer :  issuer, toss_prediction : toss_result, times : times, token: erc20_name});
+                    self.emit(RequestIssued { wager_amount :wager_amount, issuer :  issuer, toss_prediction : toss_result, times : times, token: erc20_name, request_id : current_request_id});
                 },
                 Option::None(()) => {
                     panic_with_felt252('Token is Not Supported');
@@ -198,6 +200,7 @@ mod Flip {
             let wager_amount  = request.wager_amount ;
             let toss_result_prediction  = request.chosen_coin_face ;
             let erc20_name  = request.token ;
+            let mut profit = 0;
 
             let request_status = self.requestStatus.read(requestId);
             let res = keccak::keccak_u256s_le_inputs(array![rng].span()); // returns a u256
@@ -215,21 +218,21 @@ mod Flip {
             }
             if (success) {
                 let user_address_felt252: felt252 = starknet::contract_address_to_felt252(user_address);
-
+                profit = (wager_amount * (100 - self.flip_fee.read()) / 100);
                 match self.get_token_support(erc20_name) {
                     Option::Some(_token_address) => {
                         ERC20Dispatcher {
                         contract_address: _token_address
-                        }.transferFrom(self.treasury_address.read(), user_address_felt252, (wager_amount + (wager_amount * (100 - self.flip_fee.read()) / 100)));
+                        }.transferFrom(self.treasury_address.read(), user_address_felt252, (wager_amount + profit));
                         
                         self.last_request_id_finalized.write(requestId);
-                        self.emit(RequestFinalized { request_id :requestId, success : success  });
                     },
                     Option::None(()) => {
                         panic_with_felt252('Should Not Execute');  // Should never execute this line
                     },
                 }
             }
+            self.emit(RequestFinalized { request_id :requestId, success : success, profit : profit });
 
         }
 
