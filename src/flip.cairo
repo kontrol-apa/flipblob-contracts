@@ -23,7 +23,7 @@ trait IFlip<TContractState> {
     fn is_token_supported(self: @TContractState, tokenName:felt252) -> bool;
     fn get_token_address(self: @TContractState, tokenName:felt252) -> ContractAddress;
     fn update_treasury (ref self: TContractState, treasuryAddress: felt252);
-    fn get_request_final_state(self: @TContractState, request_id : felt252) -> Flip::RequestFinalState;
+    fn get_request_final_state(self: @TContractState, request_id : felt252) -> (felt252,felt252);
 
 }
 
@@ -66,12 +66,7 @@ mod Flip {
         chosen_coin_face: u256,
         token : felt252
     }
-    #[derive(Copy, Drop, Serde, starknet::Store)] // TODO not sure if all of those annotations are required
-    struct RequestFinalState {
-        finalized : felt252,
-        success_count : felt252
-    }
-
+    
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -288,8 +283,8 @@ mod Flip {
             self.treasury_address.write(treasuryAddress);
         }
 
-        fn get_request_final_state(self: @ContractState, request_id : felt252) -> RequestFinalState {
-            RequestFinalState{finalized: self.requestStatus.read(request_id),success_count: self.request_success_count.read(request_id)}
+        fn get_request_final_state(self: @ContractState, request_id : felt252) -> (felt252,felt252) {
+            (self.requestStatus.read(request_id), self.request_success_count.read(request_id))
         }
     }
 }
