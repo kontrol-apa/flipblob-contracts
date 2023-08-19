@@ -23,6 +23,7 @@ trait IFlip<TContractState> {
     fn is_token_supported(self: @TContractState, tokenName:felt252) -> bool;
     fn get_token_address(self: @TContractState, tokenName:felt252) -> ContractAddress;
     fn update_treasury (ref self: TContractState, treasuryAddress: felt252);
+    fn get_request_final_state(self: @TContractState, request_id : felt252) -> (felt252,felt252);
 
 }
 
@@ -50,6 +51,7 @@ mod Flip {
         last_request_id_finalized: felt252, // required for backend to pick up unfinalized requests
         requests: LegacyMap<felt252, requestMetadata>,
         requestStatus: LegacyMap<felt252, felt252>,
+        request_success_count: LegacyMap<felt252, felt252>,
         fair_random_numbers: LegacyMap<felt252, u256>,
         supported_erc20: LegacyMap<felt252, ContractAddress>,
         treasury_address: felt252,
@@ -64,7 +66,7 @@ mod Flip {
         chosen_coin_face: u256,
         token : felt252
     }
-
+    
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -78,23 +80,25 @@ mod Flip {
         issuer : felt252,
         toss_prediction : u256,
         times : u256,
-        token : felt252
+        token : felt252,
+        request_id : felt252
     }
 
     #[derive(Drop, starknet::Event)]
     struct RequestFinalized {
         request_id : felt252,
-        success : bool
+        success : bool,
+        profit : u256
 
     }
 
 
     #[constructor]
-    fn constructor(ref self: ContractState, treasuryAddress: felt252, flipFee: u256) {
+    fn constructor(ref self: ContractState, treasuryAddress: felt252, owner_address: felt252, flipFee: u256) {
         // owner address
-        let caller: ContractAddress = get_caller_address();
+        let owner: ContractAddress = starknet::contract_address_try_from_felt252(owner_address).unwrap();
         let mut unsafe_state = Ownable::unsafe_new_contract_state();
-        InternalImpl::initializer(ref unsafe_state,caller); // set the caller as owner
+        InternalImpl::initializer(ref unsafe_state,owner); // set the caller as owner
         self.next_request_id.write(1); // if request ids start from 0, it makes it super hard on the backend to track some stuff
         self.flip_fee.write(flipFee);
         self.treasury_address.write(treasuryAddress);
@@ -145,7 +149,8 @@ mod Flip {
         }
         fn write_fair_rng_batch(ref self: ContractState, request_ids : Span<felt252>, fair_random_number_hashes : Array<u256>){
             assert(request_ids.len() == fair_random_number_hashes.len(),'Sizes must match');
-
+            let ownable = Ownable::unsafe_new_contract_state(); 
+            InternalImpl::assert_only_owner(@ownable);
             let mut index:usize = 0;
             loop {
 
@@ -180,7 +185,7 @@ mod Flip {
                     let current_request_id: felt252 = self.next_request_id.read();
                     self.next_request_id.write(current_request_id + 1); // increment
                     self.requests.write(current_request_id, requestMetadata {userAddress:caller, times:times, wager_amount: wager_amount, chosen_coin_face: toss_result, token: erc20_name });
-                    self.emit(RequestIssued { wager_amount :wager_amount, issuer :  issuer, toss_prediction : toss_result, times : times, token: erc20_name});
+                    self.emit(RequestIssued { wager_amount :wager_amount, issuer :  issuer, toss_prediction : toss_result, times : times, token: erc20_name, request_id : current_request_id});
                 },
                 Option::None(()) => {
                     panic_with_felt252('Token is Not Supported');
@@ -198,6 +203,9 @@ mod Flip {
             let wager_amount  = request.wager_amount ;
             let toss_result_prediction  = request.chosen_coin_face ;
             let erc20_name  = request.token ;
+            let mut profit = 0;
+            let last_request_finalized = self.last_request_id_finalized.read();
+
 
             let request_status = self.requestStatus.read(requestId);
             let res = keccak::keccak_u256s_le_inputs(array![rng].span()); // returns a u256
@@ -208,6 +216,7 @@ mod Flip {
             
 
             self.requestStatus.write(requestId, 1);
+            self.last_request_id_finalized.write(last_request_finalized + 1);
             let toss_result:u256 = rng % 2;
             let mut success = false;
             if toss_result == toss_result_prediction {
@@ -215,21 +224,22 @@ mod Flip {
             }
             if (success) {
                 let user_address_felt252: felt252 = starknet::contract_address_to_felt252(user_address);
-
+                profit = (wager_amount * (100 - self.flip_fee.read()) / 100);
                 match self.get_token_support(erc20_name) {
                     Option::Some(_token_address) => {
                         ERC20Dispatcher {
                         contract_address: _token_address
-                        }.transferFrom(self.treasury_address.read(), user_address_felt252, (wager_amount + (wager_amount * (100 - self.flip_fee.read()) / 100)));
+                        }.transferFrom(self.treasury_address.read(), user_address_felt252, (wager_amount + profit));
                         
                         self.last_request_id_finalized.write(requestId);
-                        self.emit(RequestFinalized { request_id :requestId, success : success  });
+                        self.request_success_count.write(requestId,1); // modify for multiple flips
                     },
                     Option::None(()) => {
                         panic_with_felt252('Should Not Execute');  // Should never execute this line
                     },
                 }
             }
+            self.emit(RequestFinalized { request_id :requestId, success : success, profit : profit });
 
         }
 
@@ -271,6 +281,10 @@ mod Flip {
             InternalImpl::assert_only_owner(@ownable);
             assert(treasuryAddress.is_non_zero(), 'Cant use 0 address');
             self.treasury_address.write(treasuryAddress);
+        }
+
+        fn get_request_final_state(self: @ContractState, request_id : felt252) -> (felt252,felt252) {
+            (self.requestStatus.read(request_id), self.request_success_count.read(request_id))
         }
     }
 }
