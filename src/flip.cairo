@@ -92,11 +92,11 @@ mod Flip {
 
 
     #[constructor]
-    fn constructor(ref self: ContractState, treasuryAddress: felt252, flipFee: u256) {
+    fn constructor(ref self: ContractState, treasuryAddress: felt252, owner_address: felt252, flipFee: u256) {
         // owner address
-        let caller: ContractAddress = get_caller_address();
+        let owner: ContractAddress = starknet::contract_address_try_from_felt252(owner_address).unwrap();
         let mut unsafe_state = Ownable::unsafe_new_contract_state();
-        InternalImpl::initializer(ref unsafe_state,caller); // set the caller as owner
+        InternalImpl::initializer(ref unsafe_state,owner); // set the caller as owner
         self.next_request_id.write(1); // if request ids start from 0, it makes it super hard on the backend to track some stuff
         self.flip_fee.write(flipFee);
         self.treasury_address.write(treasuryAddress);
