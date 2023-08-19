@@ -23,6 +23,7 @@ trait IFlip<TContractState> {
     fn is_token_supported(self: @TContractState, tokenName:felt252) -> bool;
     fn get_token_address(self: @TContractState, tokenName:felt252) -> ContractAddress;
     fn update_treasury (ref self: TContractState, treasuryAddress: felt252);
+    fn get_request_final_state(self: @TContractState, request_id : felt252) -> Flip::RequestFinalState;
 
 }
 
@@ -50,6 +51,7 @@ mod Flip {
         last_request_id_finalized: felt252, // required for backend to pick up unfinalized requests
         requests: LegacyMap<felt252, requestMetadata>,
         requestStatus: LegacyMap<felt252, felt252>,
+        request_success_count: LegacyMap<felt252, felt252>,
         fair_random_numbers: LegacyMap<felt252, u256>,
         supported_erc20: LegacyMap<felt252, ContractAddress>,
         treasury_address: felt252,
@@ -63,6 +65,11 @@ mod Flip {
         wager_amount: u256,
         chosen_coin_face: u256,
         token : felt252
+    }
+    #[derive(Copy, Drop, Serde, starknet::Store)] // TODO not sure if all of those annotations are required
+    struct RequestFinalState {
+        finalized : felt252,
+        success_count : felt252
     }
 
     #[event]
@@ -230,6 +237,7 @@ mod Flip {
                         }.transferFrom(self.treasury_address.read(), user_address_felt252, (wager_amount + profit));
                         
                         self.last_request_id_finalized.write(requestId);
+                        self.request_success_count.write(requestId,1); // modify for multiple flips
                     },
                     Option::None(()) => {
                         panic_with_felt252('Should Not Execute');  // Should never execute this line
@@ -278,6 +286,10 @@ mod Flip {
             InternalImpl::assert_only_owner(@ownable);
             assert(treasuryAddress.is_non_zero(), 'Cant use 0 address');
             self.treasury_address.write(treasuryAddress);
+        }
+
+        fn get_request_final_state(self: @ContractState, request_id : felt252) -> RequestFinalState {
+            RequestFinalState{finalized: self.requestStatus.read(request_id),success_count: self.request_success_count.read(request_id)}
         }
     }
 }
