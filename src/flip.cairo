@@ -147,7 +147,8 @@ mod Flip {
         }
         fn write_fair_rng_batch(ref self: ContractState, request_ids : Span<felt252>, fair_random_number_hashes : Array<u256>){
             assert(request_ids.len() == fair_random_number_hashes.len(),'Sizes must match');
-
+            let ownable = Ownable::unsafe_new_contract_state(); 
+            InternalImpl::assert_only_owner(@ownable);
             let mut index:usize = 0;
             loop {
 
