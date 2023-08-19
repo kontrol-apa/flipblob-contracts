@@ -202,6 +202,8 @@ mod Flip {
             let toss_result_prediction  = request.chosen_coin_face ;
             let erc20_name  = request.token ;
             let mut profit = 0;
+            let last_request_finalized = self.last_request_id_finalized.read();
+
 
             let request_status = self.requestStatus.read(requestId);
             let res = keccak::keccak_u256s_le_inputs(array![rng].span()); // returns a u256
@@ -212,6 +214,7 @@ mod Flip {
             
 
             self.requestStatus.write(requestId, 1);
+            self.last_request_id_finalized.write(last_request_finalized + 1);
             let toss_result:u256 = rng % 2;
             let mut success = false;
             if toss_result == toss_result_prediction {
