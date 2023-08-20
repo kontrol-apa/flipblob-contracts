@@ -22,28 +22,7 @@ fn deploy_contract(name: felt252, arguments:Array<felt252>) -> ContractAddress {
     deploy(prepared).unwrap()
 }
 
-fn prepare_rng(ref flip_safe_dispatcher: IFlipSafeDispatcher, ref request_ids : Array<felt252>, ref fair_random_number_hashes : Array<u256>, ref random_numbers : Array<u256>){
-    let mut index = 1;
-    let SIZE = 20;
-    loop {
-        let random_number = flip_safe_dispatcher.calculate_keccak(index.into()).unwrap();
-        let hash = flip_safe_dispatcher.calculate_keccak(random_number).unwrap();
-        random_numbers.append(random_number);
-        fair_random_number_hashes.append(hash);
-        request_ids.append(index.into());
-
-        if index == SIZE {
-            break;
-        } else {
-            index += 1;
-        };
-    };
-}
-
-
-#[test]
-fn test_write_batch() {
-
+fn deploy_flip_and_mockerc20() -> (ContractAddress,ContractAddress) {
     let mut calldata = ArrayTrait::new();
     let flipFee:u256 = 5;
     let flipFeeLow = flipFee.low.into();
@@ -69,13 +48,40 @@ fn test_write_batch() {
     calldata.append(starknet::contract_address_to_felt252(common::treasury()));
 
     let erc20_contract_address = deploy_contract('ERC20', calldata);
+    let erc20_safe_dispatcher = IERC20SafeDispatcher { contract_address:erc20_contract_address };
+    let balance_of_treasury =  erc20_safe_dispatcher.balance_of(common::treasury()).unwrap();
+    assert( balance_of_treasury == initialSupply, 'Balances dont match!');
 
+    (flip_contract_address, erc20_contract_address)
+}
+
+
+
+fn prepare_rng(ref flip_safe_dispatcher: IFlipSafeDispatcher, ref request_ids : Array<felt252>, ref fair_random_number_hashes : Array<u256>, ref random_numbers : Array<u256>){
+    let mut index = 1;
+    let SIZE = 20;
+    loop {
+        let random_number = flip_safe_dispatcher.calculate_keccak(index.into()).unwrap();
+        let hash = flip_safe_dispatcher.calculate_keccak(random_number).unwrap();
+        random_numbers.append(random_number);
+        fair_random_number_hashes.append(hash);
+        request_ids.append(index.into());
+
+        if index == SIZE {
+            break;
+        } else {
+            index += 1;
+        };
+    };
+}
+
+
+#[test]
+fn test_write_batch() {
+    let (flip_contract_address, erc20_contract_address) = deploy_flip_and_mockerc20();
     let mut flip_safe_dispatcher = IFlipSafeDispatcher { contract_address:flip_contract_address };
     let erc20_safe_dispatcher = IERC20SafeDispatcher { contract_address:erc20_contract_address };
 
-
-    let balance_of_treasury =  erc20_safe_dispatcher.balance_of(common::treasury()).unwrap();
-    assert( balance_of_treasury == initialSupply, 'Balances dont match!');
 
     start_prank(flip_contract_address,common::admin()); // MOCK ADMIN TO ADD COIN SUPPORT
     flip_safe_dispatcher.set_token_support('METH', erc20_contract_address);
