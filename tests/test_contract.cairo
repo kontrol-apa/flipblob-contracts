@@ -358,10 +358,9 @@ fn test_multi_bet() {
        }
     }
     let (state, success_count) = flip_safe_dispatcher.get_request_final_state(*request_ids.at(index)).unwrap();
-    // assert (state == 1 , "Transaction must be finalized!");
-    // assert (success_count <= times , "Succces count cant be greater than the roll amount!");
+    assert (state == 1 , 'Transaction must be finalized!');
+    assert (success_count <= times , 'Count greater than the amount');
     let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
-    success_count.print();
     assert((post_balance - pre_balance ) == ((bet + bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100) * success_count), 'Balances donts match!');
 
 }
