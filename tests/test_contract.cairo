@@ -89,12 +89,23 @@ fn prepare_rng(ref flip_safe_dispatcher: IFlipSafeDispatcher, ref request_ids : 
     };
 }
 
+fn approve_and_mint(ref erc20_safe_dispatcher:IERC20SafeDispatcher, flip_contract_address:@ContractAddress, erc20_contract_address:@ContractAddress, amount: u256) {
+    start_prank(*erc20_contract_address, common::user());  // MOCK USER TO FLIP
+    erc20_safe_dispatcher.approve(*flip_contract_address, amount);
+    erc20_safe_dispatcher.mint(common::user(), amount);
+    stop_prank(*erc20_contract_address);
+
+    start_prank(*erc20_contract_address, common::treasury()); // MOCK TREASURY TO APPROVE FLIP CONTRACT FOR SPENDING
+    erc20_safe_dispatcher.approve(*flip_contract_address, amount);
+    stop_prank(*erc20_contract_address);
+}
+
 
 #[test]
 fn test_write_batch() {
     let (flip_contract_address, erc20_contract_address) = deploy_flip_and_mockerc20();
     let mut flip_safe_dispatcher = IFlipSafeDispatcher { contract_address:flip_contract_address };
-    let erc20_safe_dispatcher = IERC20SafeDispatcher { contract_address:erc20_contract_address };
+    let mut erc20_safe_dispatcher = IERC20SafeDispatcher { contract_address:erc20_contract_address };
 
     set_token_support(ref flip_safe_dispatcher, @flip_contract_address, @erc20_contract_address, 'METH');
 
@@ -107,16 +118,8 @@ fn test_write_batch() {
     flip_safe_dispatcher.write_fair_rng_batch(request_ids.span(), fair_random_number_hashes);
     stop_prank(flip_contract_address);
 
-
-    let approve_amount = 1000000000000000000;
-    start_prank(erc20_contract_address, common::user());  // MOCK USER TO FLIP
-    erc20_safe_dispatcher.approve(flip_contract_address, approve_amount);
-    erc20_safe_dispatcher.mint(common::user(), approve_amount);
-    stop_prank(erc20_contract_address);
-
-    start_prank(erc20_contract_address, common::treasury()); // MOCK TREASURY TO APPROVE FLIP CONTRACT FOR SPENDING
-    erc20_safe_dispatcher.approve(flip_contract_address, approve_amount);
-    stop_prank(erc20_contract_address);
+    approve_and_mint(ref erc20_safe_dispatcher, @flip_contract_address, @erc20_contract_address ,1000000000000000000);
+    
 
 
     let index = 0;
