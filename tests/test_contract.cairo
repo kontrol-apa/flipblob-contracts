@@ -178,8 +178,6 @@ fn test_single_erc20() {
     stop_prank(flip_contract_address);
 
     approve_and_mint(ref meth_safe_dispatcher, @flip_contract_address, @meth_contract_address ,1000000000000000000);
-    
-
 
     let index = 0;
     let bet = 1000000;
@@ -270,14 +268,15 @@ fn test_double_erc20() {
      match flip_safe_dispatcher.finalize_request(*request_ids.at(index), *random_numbers.at(index) ) {
        Result::Ok(_) => 'done'.print(),
        Result::Err(panic_data) => {
-            assert(*panic_data.at(0) == 'Request already finalized', *panic_data.at(0));
+            (*panic_data.at(0)).print();
        }
     }
 
     let post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap(); 
     assert((post_balance - pre_balance ) == (2 * bet - bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100), 'Balances dont match!');
 
-
+    index = index ;
+    bet = 11000000;
     start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
     match flip_safe_dispatcher.issue_request(1, bet, 2, 'METH') {
        Result::Ok(_) => 'done'.print(),
@@ -285,5 +284,38 @@ fn test_double_erc20() {
             assert(*panic_data.at(0) == 'Unsupported Coin Face.', *panic_data.at(0));
        }
     }
+
+    match flip_safe_dispatcher.issue_request(1, bet, 1, 'METH') {
+       Result::Ok(_) => 'done'.print(),
+       Result::Err(panic_data) => {
+            (*panic_data.at(0)).print();
+       
+       }
+    }
     stop_prank(flip_contract_address);
+
+    match flip_safe_dispatcher.finalize_request(*request_ids.at(index), *random_numbers.at(index) ) {
+       Result::Ok(_) => 'done'.print(),
+       Result::Err(panic_data) => {
+            assert(*panic_data.at(0) == 'Request already finalized.', *panic_data.at(0));
+       }
+    }
+
+    match flip_safe_dispatcher.finalize_request(*request_ids.at(index + 1), *random_numbers.at(index) ) {
+       Result::Ok(_) => 'done'.print(),
+       Result::Err(panic_data) => {
+            assert(*panic_data.at(0) == 'Wrong number.', *panic_data.at(0));
+       }
+    }
+
+    index = index +1  ;
+
+    match flip_safe_dispatcher.finalize_request(*request_ids.at(index), *random_numbers.at(index) ) {
+       Result::Ok(_) => 'done'.print(),
+       Result::Err(panic_data) => {
+            (*panic_data.at(0)).print();
+       
+       }
+    }
+
  }
