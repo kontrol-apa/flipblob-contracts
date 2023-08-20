@@ -55,7 +55,21 @@ fn deploy_flip_and_mockerc20() -> (ContractAddress,ContractAddress) {
     (flip_contract_address, erc20_contract_address)
 }
 
+fn set_token_support(ref flip_safe_dispatcher:IFlipSafeDispatcher,  flip_contract_address:@ContractAddress, erc20_contract_address:@ContractAddress, token_name:felt252) {
 
+    start_prank(*flip_contract_address, common::admin()); // MOCK ADMIN TO ADD COIN SUPPORT
+    flip_safe_dispatcher.set_token_support(token_name, *erc20_contract_address);
+    stop_prank(*flip_contract_address);
+
+    let is_supported:bool = flip_safe_dispatcher.is_token_supported(token_name).unwrap();
+    assert( is_supported == true, 'Token is not Supported!');
+
+    let querried_erc20_contract_address = flip_safe_dispatcher.get_token_address(token_name).unwrap();
+    assert(querried_erc20_contract_address == *erc20_contract_address, 'Addresses Must Match!');
+
+    let is_supported:bool = flip_safe_dispatcher.is_token_supported('MATIC').unwrap();
+    assert( is_supported == false, 'MATIC is Not Supported!');
+}
 
 fn prepare_rng(ref flip_safe_dispatcher: IFlipSafeDispatcher, ref request_ids : Array<felt252>, ref fair_random_number_hashes : Array<u256>, ref random_numbers : Array<u256>){
     let mut index = 1;
@@ -82,20 +96,7 @@ fn test_write_batch() {
     let mut flip_safe_dispatcher = IFlipSafeDispatcher { contract_address:flip_contract_address };
     let erc20_safe_dispatcher = IERC20SafeDispatcher { contract_address:erc20_contract_address };
 
-
-    start_prank(flip_contract_address,common::admin()); // MOCK ADMIN TO ADD COIN SUPPORT
-    flip_safe_dispatcher.set_token_support('METH', erc20_contract_address);
-    stop_prank(flip_contract_address);
-
-    let is_supported:bool = flip_safe_dispatcher.is_token_supported('METH').unwrap();
-    assert( is_supported == true, 'WETH is Supported!');
-
-    let querried_erc20_contract_address = flip_safe_dispatcher.get_token_address('METH').unwrap();
-    assert(querried_erc20_contract_address == erc20_contract_address, 'Addresses Must Match!');
-
-    let is_supported:bool = flip_safe_dispatcher.is_token_supported('USDC').unwrap();
-    assert( is_supported == false, 'USDC is Not Supported!');
-
+    set_token_support(ref flip_safe_dispatcher, @flip_contract_address, @erc20_contract_address, 'METH');
 
     let mut request_ids: Array<felt252> = ArrayTrait::new();
     let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
