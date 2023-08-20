@@ -1,4 +1,4 @@
-use array::{Span, ArrayTrait, SpanTrait};
+use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
 use result::ResultTrait;
 use option::OptionTrait;
 use traits::TryInto;
@@ -7,6 +7,7 @@ use starknet::ContractAddress;
 use starknet::Felt252TryIntoContractAddress;
 use cheatcodes::PreparedContract;
 use debug::PrintTrait;
+use clone::Clone;
 use FlipBlob::flip::IFlipSafeDispatcher;
 use FlipBlob::flip::IFlipSafeDispatcherTrait;
 use FlipBlob::merc20::IERC20SafeDispatcherTrait;
@@ -22,7 +23,24 @@ fn deploy_contract(name: felt252, arguments:Array<felt252>) -> ContractAddress {
     deploy(prepared).unwrap()
 }
 
-fn deploy_flip_and_mockerc20() -> (ContractAddress,ContractAddress) {
+fn deploy_multiple_contracts(name: felt252, mut arguments:Array<Array<felt252>>) -> Array<ContractAddress> {
+    let class_hash = declare(name);
+    let mut erc20_addresses:Array<ContractAddress> = ArrayTrait::new();
+
+    loop{
+            match arguments.pop_front() {
+                Option::Some(calldata) => {
+                    let prepared = PreparedContract {class_hash, constructor_calldata: @calldata};
+                    erc20_addresses.append (deploy(prepared).unwrap());
+                },
+                Option::None(_) => {
+                    break erc20_addresses.clone();
+                }
+            };
+    }
+}
+
+fn deploy_flip_and_mocketh() -> (ContractAddress,ContractAddress) {
     let mut calldata = ArrayTrait::new();
     let flipFee:u256 = 5;
     let flipFeeLow = flipFee.low.into();
@@ -47,12 +65,53 @@ fn deploy_flip_and_mockerc20() -> (ContractAddress,ContractAddress) {
     calldata.append(initialSupplyHigh);
     calldata.append(starknet::contract_address_to_felt252(common::treasury()));
 
-    let erc20_contract_address = deploy_contract('ERC20', calldata);
-    let erc20_safe_dispatcher = IERC20SafeDispatcher { contract_address:erc20_contract_address };
-    let balance_of_treasury =  erc20_safe_dispatcher.balance_of(common::treasury()).unwrap();
+    let meth_contract_address = deploy_contract('ERC20', calldata);
+    let meth_safe_dispatcher = IERC20SafeDispatcher { contract_address:meth_contract_address };
+    let balance_of_treasury =  meth_safe_dispatcher.balance_of(common::treasury()).unwrap();
     assert( balance_of_treasury == initialSupply, 'Balances dont match!');
 
-    (flip_contract_address, erc20_contract_address)
+    (flip_contract_address, meth_contract_address)
+}
+
+fn deploy_flip_and_mocketh_usdc() -> (ContractAddress, ContractAddress, ContractAddress) {
+    let mut calldata = ArrayTrait::new();
+    let flipFee:u256 = 5;
+    let flipFeeLow = flipFee.low.into();
+    let flipFeeHigh = flipFee.high.into();
+
+    calldata.append(starknet::contract_address_to_felt252(common::treasury()));
+    calldata.append(starknet::contract_address_to_felt252(common::admin()));
+    calldata.append(flipFeeLow);
+    calldata.append(flipFeeHigh);
+
+    let flip_contract_address = deploy_contract('Flip', calldata);
+    let mut calldatas:Array<Array<felt252>>  = ArrayTrait::new();
+    
+    let mut calldata = ArrayTrait::new();
+    let initialSupply:u256 = 100000000000000000000;
+    let initialSupplyLow = initialSupply.low.into();
+    let initialSupplyHigh = initialSupply.high.into();
+    calldata.append('CIRCLE USDC');
+    calldata.append('USDC');
+    calldata.append(initialSupplyLow);
+    calldata.append(initialSupplyHigh);
+    calldata.append(starknet::contract_address_to_felt252(common::treasury()));
+
+    calldatas.append(calldata);
+    let mut calldata = ArrayTrait::new();
+    calldata.append('MOCK_ETH USDC');
+    calldata.append('METH');
+    calldata.append(initialSupplyLow);
+    calldata.append(initialSupplyHigh);
+    calldata.append(starknet::contract_address_to_felt252(common::treasury()));
+    calldatas.append(calldata);
+
+    let addresses:Array<ContractAddress> = deploy_multiple_contracts('ERC20',calldatas);
+    let usdc_safe_dispatcher = IERC20SafeDispatcher { contract_address:*addresses.at(0) };
+    let balance_of_treasury =  usdc_safe_dispatcher.balance_of(common::treasury()).unwrap();
+    assert( balance_of_treasury == initialSupply, 'Balances dont match!');
+
+    (flip_contract_address, *addresses.at(1), *addresses.at(0) )
 }
 
 fn set_token_support(ref flip_safe_dispatcher:IFlipSafeDispatcher,  flip_contract_address:@ContractAddress, erc20_contract_address:@ContractAddress, token_name:felt252) {
@@ -102,12 +161,12 @@ fn approve_and_mint(ref erc20_safe_dispatcher:IERC20SafeDispatcher, flip_contrac
 
 
 #[test]
-fn test_write_batch() {
-    let (flip_contract_address, erc20_contract_address) = deploy_flip_and_mockerc20();
+fn test_single_erc20() {
+    let (flip_contract_address, meth_contract_address) = deploy_flip_and_mocketh();
     let mut flip_safe_dispatcher = IFlipSafeDispatcher { contract_address:flip_contract_address };
-    let mut erc20_safe_dispatcher = IERC20SafeDispatcher { contract_address:erc20_contract_address };
+    let mut meth_safe_dispatcher = IERC20SafeDispatcher { contract_address:meth_contract_address };
 
-    set_token_support(ref flip_safe_dispatcher, @flip_contract_address, @erc20_contract_address, 'METH');
+    set_token_support(ref flip_safe_dispatcher, @flip_contract_address, @meth_contract_address, 'METH');
 
     let mut request_ids: Array<felt252> = ArrayTrait::new();
     let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
@@ -118,18 +177,18 @@ fn test_write_batch() {
     flip_safe_dispatcher.write_fair_rng_batch(request_ids.span(), fair_random_number_hashes);
     stop_prank(flip_contract_address);
 
-    approve_and_mint(ref erc20_safe_dispatcher, @flip_contract_address, @erc20_contract_address ,1000000000000000000);
+    approve_and_mint(ref meth_safe_dispatcher, @flip_contract_address, @meth_contract_address ,1000000000000000000);
     
 
 
     let index = 0;
     let bet = 1000000;
-    let pre_bet_balance = erc20_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
     start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
     flip_safe_dispatcher.issue_request(1, bet, 0, 'METH');
     stop_prank(flip_contract_address);
 
-    let pre_balance = erc20_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
     assert((pre_bet_balance - pre_balance ) == (bet), 'Balances dont match!'  );
 
      match flip_safe_dispatcher.finalize_request(*request_ids.at(index), *random_numbers.at(index) ) {
@@ -139,7 +198,7 @@ fn test_write_batch() {
        }
     }
 
-    let post_balance = erc20_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
 
     assert((post_balance - pre_balance ) == (2 * bet - bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100), 'Balances dont match!'  );
 
@@ -151,6 +210,80 @@ fn test_write_batch() {
        }
     }
     stop_prank(flip_contract_address);
+ }
+
+#[test]
+fn test_double_erc20() {
+    let (flip_contract_address, meth_contract_address, usdc_contract_address) = deploy_flip_and_mocketh_usdc();
+    let mut flip_safe_dispatcher = IFlipSafeDispatcher { contract_address:flip_contract_address };
+    let mut meth_safe_dispatcher = IERC20SafeDispatcher { contract_address:meth_contract_address };
+    let mut usdc_safe_dispatcher = IERC20SafeDispatcher { contract_address:usdc_contract_address };
+
+    set_token_support(ref flip_safe_dispatcher, @flip_contract_address, @meth_contract_address, 'METH');
+    set_token_support(ref flip_safe_dispatcher, @flip_contract_address, @usdc_contract_address, 'USDC');
+
+    let mut request_ids: Array<felt252> = ArrayTrait::new();
+    let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
+    let mut random_numbers = ArrayTrait::<u256>::new();
+    prepare_rng(ref flip_safe_dispatcher, ref request_ids, ref fair_random_number_hashes, ref random_numbers);
+    
+    start_prank(flip_contract_address,common::admin());  // MOCK ADMIN TO WRITE FAIR RNG
+    flip_safe_dispatcher.write_fair_rng_batch(request_ids.span(), fair_random_number_hashes);
+    stop_prank(flip_contract_address);
+
+    approve_and_mint(ref meth_safe_dispatcher, @flip_contract_address, @meth_contract_address ,100000000000000000000);
+    approve_and_mint(ref usdc_safe_dispatcher, @flip_contract_address, @usdc_contract_address ,10000000000000000000);
+    
 
 
+    let mut index = 0;
+    let mut bet = 1000000;
+    let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
+    flip_safe_dispatcher.issue_request(1, bet, 0, 'METH');
+    stop_prank(flip_contract_address);
+
+    let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    assert((pre_bet_balance - pre_balance ) == (bet), 'Balances dont match!'  );
+
+     match flip_safe_dispatcher.finalize_request(*request_ids.at(index), *random_numbers.at(index) ) {
+       Result::Ok(_) => 'done'.print(),
+       Result::Err(panic_data) => {
+            assert(*panic_data.at(0) == 'Request already finalized', *panic_data.at(0));
+       }
+    }
+
+    let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    assert((post_balance - pre_balance ) == (2 * bet - bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100), 'Balances dont match!');
+
+
+    index = index + 1;
+    bet = 11000000;
+    let pre_bet_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
+    flip_safe_dispatcher.issue_request(1, bet, 0, 'USDC');
+    stop_prank(flip_contract_address);
+
+    let pre_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    assert((pre_bet_balance - pre_balance ) == (bet), 'Balances dont match!'  );
+
+     match flip_safe_dispatcher.finalize_request(*request_ids.at(index), *random_numbers.at(index) ) {
+       Result::Ok(_) => 'done'.print(),
+       Result::Err(panic_data) => {
+            assert(*panic_data.at(0) == 'Request already finalized', *panic_data.at(0));
+       }
+    }
+
+    let post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    assert((post_balance - pre_balance ) == (2 * bet - bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100), 'Balances dont match!');
+
+
+    start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
+    match flip_safe_dispatcher.issue_request(1, bet, 2, 'METH') {
+       Result::Ok(_) => 'done'.print(),
+       Result::Err(panic_data) => {
+            assert(*panic_data.at(0) == 'Unsupported Coin Face.', *panic_data.at(0));
+       }
+    }
+    stop_prank(flip_contract_address);
  }
