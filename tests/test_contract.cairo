@@ -12,6 +12,7 @@ use FlipBlob::flip::IFlipSafeDispatcherTrait;
 use FlipBlob::merc20::IERC20SafeDispatcherTrait;
 use FlipBlob::merc20::IERC20SafeDispatcher;
 use starknet::get_caller_address;
+use FlipBlob::common;
 
 fn deploy_contract(name: felt252, arguments:Array<felt252>) -> ContractAddress {
     let class_hash = declare(name);
@@ -39,33 +40,17 @@ fn prepare_rng(ref flip_safe_dispatcher: IFlipSafeDispatcher, ref request_ids : 
     };
 }
 
-fn arr_copy(mut vals: Span<u32>) -> u32 {
-    let mut sum = 0_u32;
-
-    loop {
-        match vals.pop_front() {
-            Option::Some(v) => {
-                sum += *v;
-            },
-            Option::None(_) => {
-                break sum;
-            }
-        };
-    }
-}
-
-
 
 #[test]
 fn test_write_batch() {
 
     let mut calldata = ArrayTrait::new();
     let flipFee:u256 = 5;
-    let treasury:felt252= 0x034e31357d1c3693bda06d04bf4c51557514eced5a8e9973bdb772f7fb978b36;
     let flipFeeLow = flipFee.low.into();
     let flipFeeHigh = flipFee.high.into();
 
-    calldata.append(treasury);
+    calldata.append(starknet::contract_address_to_felt252(common::treasury()));
+    calldata.append(starknet::contract_address_to_felt252(common::admin()));
     calldata.append(flipFeeLow);
     calldata.append(flipFeeHigh);
 
@@ -81,7 +66,7 @@ fn test_write_batch() {
     calldata.append('METH');
     calldata.append(initialSupplyLow);
     calldata.append(initialSupplyHigh);
-    calldata.append(treasury);
+    calldata.append(starknet::contract_address_to_felt252(common::treasury()));
 
     let erc20_contract_address = deploy_contract('ERC20', calldata);
 
@@ -89,10 +74,13 @@ fn test_write_batch() {
     let erc20_safe_dispatcher = IERC20SafeDispatcher { contract_address:erc20_contract_address };
 
 
-    let balance_of_treasury =  erc20_safe_dispatcher.balance_of(starknet::contract_address_try_from_felt252(treasury).unwrap()).unwrap();
+    let balance_of_treasury =  erc20_safe_dispatcher.balance_of(common::treasury()).unwrap();
     assert( balance_of_treasury == initialSupply, 'Balances dont match!');
 
+    start_prank(flip_contract_address,common::admin()); // MOCK ADMIN TO ADD COIN SUPPORT
     flip_safe_dispatcher.set_token_support('METH', erc20_contract_address);
+    stop_prank(flip_contract_address);
+
     let is_supported:bool = flip_safe_dispatcher.is_token_supported('METH').unwrap();
     assert( is_supported == true, 'WETH is Supported!');
 
@@ -108,26 +96,30 @@ fn test_write_batch() {
     let mut random_numbers = ArrayTrait::<u256>::new();
     prepare_rng(ref flip_safe_dispatcher, ref request_ids, ref fair_random_number_hashes, ref random_numbers);
     
-
+    start_prank(flip_contract_address,common::admin());  // MOCK ADMIN TO WRITE FAIR RNG
     flip_safe_dispatcher.write_fair_rng_batch(request_ids.span(), fair_random_number_hashes);
-    let myAddress = flip_safe_dispatcher.owner().unwrap();
+    stop_prank(flip_contract_address);
+
 
     let approve_amount = 1000000000000000000;
-    start_prank(erc20_contract_address, myAddress);
+    start_prank(erc20_contract_address, common::user());  // MOCK USER TO FLIP
     erc20_safe_dispatcher.approve(flip_contract_address, approve_amount);
-    erc20_safe_dispatcher.mint(myAddress, approve_amount);
+    erc20_safe_dispatcher.mint(common::user(), approve_amount);
     stop_prank(erc20_contract_address);
 
-    start_prank(erc20_contract_address, starknet::contract_address_try_from_felt252(treasury).unwrap());
+    start_prank(erc20_contract_address, common::treasury()); // MOCK TREASURY TO APPROVE FLIP CONTRACT FOR SPENDING
     erc20_safe_dispatcher.approve(flip_contract_address, approve_amount);
     stop_prank(erc20_contract_address);
 
 
     let index = 0;
     let bet = 1000000;
-    let pre_bet_balance = erc20_safe_dispatcher.balance_of(myAddress).unwrap(); 
+    let pre_bet_balance = erc20_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
     flip_safe_dispatcher.issue_request(1, bet, 0, 'METH');
-    let pre_balance = erc20_safe_dispatcher.balance_of(myAddress).unwrap(); 
+    stop_prank(flip_contract_address);
+
+    let pre_balance = erc20_safe_dispatcher.balance_of(common::user()).unwrap(); 
     assert((pre_bet_balance - pre_balance ) == (bet), 'Balances dont match!'  );
 
      match flip_safe_dispatcher.finalize_request(*request_ids.at(index), *random_numbers.at(index) ) {
@@ -137,16 +129,18 @@ fn test_write_batch() {
        }
     }
 
-    let post_balance = erc20_safe_dispatcher.balance_of(myAddress).unwrap(); 
+    let post_balance = erc20_safe_dispatcher.balance_of(common::user()).unwrap(); 
 
     assert((post_balance - pre_balance ) == (2 * bet - bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100), 'Balances dont match!'  );
 
-
+    start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
     match flip_safe_dispatcher.issue_request(1, bet, 2, 'METH') {
        Result::Ok(_) => 'done'.print(),
        Result::Err(panic_data) => {
             assert(*panic_data.at(0) == 'Unsupported Coin Face', *panic_data.at(0));
        }
     }
+    stop_prank(flip_contract_address);
+
 
  }
