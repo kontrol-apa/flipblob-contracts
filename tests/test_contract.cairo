@@ -137,7 +137,7 @@ fn test_write_batch() {
     match flip_safe_dispatcher.issue_request(1, bet, 2, 'METH') {
        Result::Ok(_) => 'done'.print(),
        Result::Err(panic_data) => {
-            assert(*panic_data.at(0) == 'Unsupported Coin Face', *panic_data.at(0));
+            assert(*panic_data.at(0) == 'Unsupported Coin Face.', *panic_data.at(0));
        }
     }
     stop_prank(flip_contract_address);

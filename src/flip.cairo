@@ -23,7 +23,7 @@ trait IFlip<TContractState> {
     fn is_token_supported(self: @TContractState, tokenName:felt252) -> bool;
     fn get_token_address(self: @TContractState, tokenName:felt252) -> ContractAddress;
     fn update_treasury (ref self: TContractState, treasuryAddress: felt252);
-    fn get_request_final_state(self: @TContractState, request_id : felt252) -> (felt252,felt252);
+    fn get_request_final_state(self: @TContractState, request_id : felt252) -> (felt252,u256);
 
 }
 
@@ -51,7 +51,7 @@ mod Flip {
         last_request_id_finalized: felt252, // required for backend to pick up unfinalized requests
         requests: LegacyMap<felt252, requestMetadata>,
         requestStatus: LegacyMap<felt252, felt252>,
-        request_success_count: LegacyMap<felt252, felt252>,
+        request_success_count: LegacyMap<felt252, u256>,
         fair_random_numbers: LegacyMap<felt252, u256>,
         supported_erc20: LegacyMap<felt252, ContractAddress>,
         treasury_address: felt252,
@@ -178,10 +178,12 @@ mod Flip {
         ) {
             let caller: ContractAddress = get_caller_address();
             let issuer = starknet::contract_address_to_felt252(caller);
-            assert(((toss_result == 0) || (toss_result == 1)), 'Unsupported Coin Face');
+            assert(((toss_result == 0) || (toss_result == 1)), 'Unsupported Coin Face.');
+            assert (times > 0, 'Invalid amount.');
+
             match self.get_token_support(erc20_name) {
                 Option::Some(_token_address) => {
-                    ERC20Dispatcher {contract_address: _token_address}.transferFrom(issuer, self.treasury_address.read(), wager_amount);
+                    ERC20Dispatcher {contract_address: _token_address}.transferFrom(issuer, self.treasury_address.read(), wager_amount * times);
                     let current_request_id: felt252 = self.next_request_id.read();
                     self.next_request_id.write(current_request_id + 1); // increment
                     self.requests.write(current_request_id, requestMetadata {userAddress:caller, times:times, wager_amount: wager_amount, chosen_coin_face: toss_result, token: erc20_name });
@@ -211,20 +213,32 @@ mod Flip {
             let res = keccak::keccak_u256s_le_inputs(array![rng].span()); // returns a u256
             let fair_random_number_hash = self.fair_random_numbers.read(requestId);
 
-            assert(res == fair_random_number_hash, 'Wrong number');
-            assert(request_status == 0, 'Request already finalized');
-            
+            assert(res == fair_random_number_hash, 'Wrong number.');
+            assert(request_status == 0, 'Request already finalized.');
 
             self.requestStatus.write(requestId, 1);
             self.last_request_id_finalized.write(last_request_finalized + 1);
-            let toss_result:u256 = rng % 2;
             let mut success = false;
-            if toss_result == toss_result_prediction {
-                success = true;
-            }
+            let mut success_count = 0;
+            let mut index  = 1;
+            let mut mut_rng = rng;
+            loop {
+                let toss_result:u256 = mut_rng % 2;
+                if toss_result == toss_result_prediction {
+                    success = true;
+                    success_count += 1;
+                }
+
+                if index == times {
+                    break;
+                }
+                index += 1;
+                mut_rng = mut_rng / 2;
+            };
+
             if (success) {
                 let user_address_felt252: felt252 = starknet::contract_address_to_felt252(user_address);
-                profit = (wager_amount * (100 - self.flip_fee.read()) / 100);
+                profit = (wager_amount * (100 - self.flip_fee.read()) / 100) * success_count;
                 match self.get_token_support(erc20_name) {
                     Option::Some(_token_address) => {
                         ERC20Dispatcher {
@@ -232,10 +246,10 @@ mod Flip {
                         }.transferFrom(self.treasury_address.read(), user_address_felt252, (wager_amount + profit));
                         
                         self.last_request_id_finalized.write(requestId);
-                        self.request_success_count.write(requestId,1); // modify for multiple flips
+                        self.request_success_count.write(requestId, success_count); // modify for multiple flips
                     },
                     Option::None(()) => {
-                        panic_with_felt252('Should Not Execute');  // Should never execute this line
+                        panic_with_felt252('Should Not Execute.');  // Should never execute this line
                     },
                 }
             }
@@ -283,7 +297,7 @@ mod Flip {
             self.treasury_address.write(treasuryAddress);
         }
 
-        fn get_request_final_state(self: @ContractState, request_id : felt252) -> (felt252,felt252) {
+        fn get_request_final_state(self: @ContractState, request_id : felt252) -> (felt252,u256) {
             (self.requestStatus.read(request_id), self.request_success_count.read(request_id))
         }
     }
