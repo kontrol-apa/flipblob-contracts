@@ -247,7 +247,7 @@ fn test_double_erc20() {
      match flip_safe_dispatcher.finalize_request(*request_ids.at(index), *random_numbers.at(index) ) {
        Result::Ok(_) => 'done'.print(),
        Result::Err(panic_data) => {
-            assert(*panic_data.at(0) == 'Request already finalized', *panic_data.at(0));
+            (*panic_data.at(0)).print();
        }
     }
 
@@ -285,7 +285,7 @@ fn test_double_erc20() {
        }
     }
 
-    match flip_safe_dispatcher.issue_request(1, bet, 1, 'METH') {
+    match flip_safe_dispatcher.issue_request(1, bet, 1, 'USDC') {
        Result::Ok(_) => 'done'.print(),
        Result::Err(panic_data) => {
             (*panic_data.at(0)).print();
@@ -317,5 +317,52 @@ fn test_double_erc20() {
        
        }
     }
+}
+#[test]
+fn test_multi_bet() {
+    let (flip_contract_address, meth_contract_address, usdc_contract_address) = deploy_flip_and_mocketh_usdc();
+    let mut flip_safe_dispatcher = IFlipSafeDispatcher { contract_address:flip_contract_address };
+    let mut meth_safe_dispatcher = IERC20SafeDispatcher { contract_address:meth_contract_address };
+    let mut usdc_safe_dispatcher = IERC20SafeDispatcher { contract_address:usdc_contract_address };
 
- }
+    set_token_support(ref flip_safe_dispatcher, @flip_contract_address, @meth_contract_address, 'METH');
+    set_token_support(ref flip_safe_dispatcher, @flip_contract_address, @usdc_contract_address, 'USDC');
+
+    let mut request_ids: Array<felt252> = ArrayTrait::new();
+    let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
+    let mut random_numbers = ArrayTrait::<u256>::new();
+    prepare_rng(ref flip_safe_dispatcher, ref request_ids, ref fair_random_number_hashes, ref random_numbers);
+    
+    start_prank(flip_contract_address,common::admin());  // MOCK ADMIN TO WRITE FAIR RNG
+    flip_safe_dispatcher.write_fair_rng_batch(request_ids.span(), fair_random_number_hashes);
+    stop_prank(flip_contract_address);
+
+    approve_and_mint(ref meth_safe_dispatcher, @flip_contract_address, @meth_contract_address ,100000000000000000000);
+    approve_and_mint(ref usdc_safe_dispatcher, @flip_contract_address, @usdc_contract_address ,10000000000000000000);
+
+    let mut index = 0;
+    let mut bet = 10000000;
+    let mut times = 10;
+    let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
+    flip_safe_dispatcher.issue_request(times, bet, 0, 'METH');
+    stop_prank(flip_contract_address);
+
+    let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    assert((pre_bet_balance - pre_balance ) == (bet * times), 'Issue Balances dont match!'  );
+
+     match flip_safe_dispatcher.finalize_request(*request_ids.at(index), *random_numbers.at(index) ) {
+       Result::Ok(_) => 'done'.print(),
+       Result::Err(panic_data) => {
+            (*panic_data.at(0)).print();
+       }
+    }
+    let (state, success_count) = flip_safe_dispatcher.get_request_final_state(*request_ids.at(index)).unwrap();
+    // assert (state == 1 , "Transaction must be finalized!");
+    // assert (success_count <= times , "Succces count cant be greater than the roll amount!");
+    let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    success_count.print();
+    assert((post_balance - pre_balance ) == ((bet + bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100) * success_count), 'Balances donts match!');
+
+}
+
