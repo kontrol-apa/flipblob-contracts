@@ -199,7 +199,7 @@ mod Flip {
             let caller: ContractAddress = get_caller_address();
             let issuer = starknet::contract_address_to_felt252(caller);
             assert(((toss_result == 0) || (toss_result == 1)), 'Unsupported Coin Face.');
-            assert(times > 0, 'Invalid amount.');
+            assert((times > 0) && (times <= 10), 'Invalid amount.');
 
             match self.get_token_support(erc20_name) {
                 Option::Some(_token_address) => {
