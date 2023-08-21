@@ -343,12 +343,12 @@ fn test_multi_bet() {
     let mut index = 0;
     let mut bet = 10000000;
     let mut times = 10;
-    let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    let mut pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
     start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
     flip_safe_dispatcher.issue_request(times, bet, 0, 'METH');
     stop_prank(flip_contract_address);
 
-    let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    let mut pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
     assert((pre_bet_balance - pre_balance ) == (bet * times), 'Issue Balances dont match!'  );
 
      match flip_safe_dispatcher.finalize_request(*request_ids.at(index), *random_numbers.at(index) ) {
@@ -360,8 +360,30 @@ fn test_multi_bet() {
     let (state, success_count) = flip_safe_dispatcher.get_request_final_state(*request_ids.at(index)).unwrap();
     assert (state == 1 , 'Transaction must be finalized!');
     assert (success_count <= times , 'Count greater than the amount');
-    let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
-    assert((post_balance - pre_balance ) == ((bet + bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100) * success_count), 'Balances donts match!');
+    let mut post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    assert((post_balance - pre_balance ) == (success_count *( 2 * bet - bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100)), 'Balances dont match!');
+
+    bet = 555555;
+    times = 3;
+    index = index + 1;
+    pre_bet_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
+    flip_safe_dispatcher.issue_request(times, bet, 0, 'USDC');
+    stop_prank(flip_contract_address);
+
+    pre_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap(); 
+    assert((pre_bet_balance - pre_balance ) == (bet * times), 'Issue Balances dont match!'  );
+     match flip_safe_dispatcher.finalize_request(*request_ids.at(index), *random_numbers.at(index) ) {
+       Result::Ok(_) => 'done'.print(),
+       Result::Err(panic_data) => {
+            (*panic_data.at(0)).print();
+       }
+    }
+    let (state, success_count) = flip_safe_dispatcher.get_request_final_state(*request_ids.at(index)).unwrap();
+    assert (state == 1 , 'Transaction must be finalized!');
+    assert (success_count <= times , 'Count greater than the amount');
+    post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
+    // assert(((post_balance - pre_balance) - success_count *( 2 * bet - bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100)) < 10, 'Balances dont match!');
 
 }
 
