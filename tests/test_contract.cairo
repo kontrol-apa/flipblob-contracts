@@ -239,8 +239,9 @@ mod tests {
 
         match flip_safe_dispatcher
             .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-            Result::Ok(_) => 'done'.print(),
+            Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
                 assert(*panic_data.at(0) == 'Request already finalized', *panic_data.at(0));
             }
         }
@@ -259,8 +260,9 @@ mod tests {
 
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
         match flip_safe_dispatcher.issue_request(1, bet, super::INVALID, 'METH') {
-            Result::Ok(_) => 'done'.print(),
+            Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
                 assert(*panic_data.at(0) == 'Unsupported Coin Face.', *panic_data.at(0));
             }
         }
@@ -327,7 +329,7 @@ mod tests {
 
         match flip_safe_dispatcher
             .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-            Result::Ok(_) => 'done'.print(),
+            Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
             }
@@ -356,7 +358,7 @@ mod tests {
 
         match flip_safe_dispatcher
             .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-            Result::Ok(_) => 'done'.print(),
+            Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
             }
@@ -377,14 +379,15 @@ mod tests {
         bet = 11000000;
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
         match flip_safe_dispatcher.issue_request(1, bet, super::INVALID, 'METH') {
-            Result::Ok(_) => 'done'.print(),
+            Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
                 assert(*panic_data.at(0) == 'Unsupported Coin Face.', *panic_data.at(0));
             }
         }
 
         match flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'USDC') {
-            Result::Ok(_) => 'done'.print(),
+            Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
             }
@@ -393,16 +396,18 @@ mod tests {
 
         match flip_safe_dispatcher
             .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-            Result::Ok(_) => 'done'.print(),
+            Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
                 assert(*panic_data.at(0) == 'Request already finalized.', *panic_data.at(0));
             }
         }
 
         match flip_safe_dispatcher
             .finalize_request(*request_ids.at(index + 1), *random_numbers.at(index)) {
-            Result::Ok(_) => 'done'.print(),
+            Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
                 assert(*panic_data.at(0) == 'Wrong number.', *panic_data.at(0));
             }
         }
@@ -411,7 +416,7 @@ mod tests {
 
         match flip_safe_dispatcher
             .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-            Result::Ok(_) => 'done'.print(),
+            Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
             }
@@ -478,7 +483,7 @@ mod tests {
 
         match flip_safe_dispatcher
             .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-            Result::Ok(_) => 'done'.print(),
+            Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
             }
@@ -507,7 +512,7 @@ mod tests {
         assert((pre_bet_balance - pre_balance) == (bet * times), 'Issue Balances dont match!');
         match flip_safe_dispatcher
             .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-            Result::Ok(_) => 'done'.print(),
+            Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
             }
@@ -521,7 +526,20 @@ mod tests {
         assert(
             (post_balance
                 - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
-            'Balances donta match!'
+            'Balances dont match!'
         );
+        
+        times = 11;
+        start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
+        match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'METH') {
+            Result::Ok(_) => 'Passed.'.print(),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+                assert(*panic_data.at(0) == 'Invalid amount.', *panic_data.at(0));
+            }
+        }
+        stop_prank(flip_contract_address);
+
+        
     }
 }
