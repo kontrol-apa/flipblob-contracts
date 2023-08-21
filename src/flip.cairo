@@ -42,6 +42,7 @@ mod Flip {
     use super::{ERC20Dispatcher, ERC20DispatcherTrait};
     use option::OptionTrait;
     use zeroable::Zeroable;
+    use traits::Into;
 
 
     #[storage]
@@ -209,11 +210,12 @@ mod Flip {
             let last_request_finalized = self.last_request_id_finalized.read();
 
 
+            let user_address_felt252: felt252 = starknet::contract_address_to_felt252(user_address);
             let request_status = self.requestStatus.read(requestId);
-            let res = keccak::keccak_u256s_le_inputs(array![rng].span()); // returns a u256
+            let keccak_rng = keccak::keccak_u256s_le_inputs(array![rng].span()); // returns a u256
             let fair_random_number_hash = self.fair_random_numbers.read(requestId);
 
-            assert(res == fair_random_number_hash, 'Wrong number.');
+            assert(keccak_rng == fair_random_number_hash, 'Wrong number.');
             assert(request_status == 0, 'Request already finalized.');
 
             self.requestStatus.write(requestId, 1);
@@ -221,9 +223,10 @@ mod Flip {
             let mut success = false;
             let mut success_count = 0;
             let mut index  = 1;
-            let mut mut_rng = rng;
+            let mut seed = keccak::keccak_u256s_le_inputs(array![rng, user_address_felt252.into()].span()); // returns a u256
+
             loop {
-                let toss_result:u256 = mut_rng % 2;
+                let toss_result:u256 = seed % 2;
                 if toss_result == toss_result_prediction {
                     success = true;
                     success_count += 1;
@@ -233,11 +236,10 @@ mod Flip {
                     break;
                 }
                 index += 1;
-                mut_rng = mut_rng / 2;
+                seed = keccak::keccak_u256s_le_inputs(array![seed].span()); // returns a u256;
             };
 
             if (success) {
-                let user_address_felt252: felt252 = starknet::contract_address_to_felt252(user_address);
                 profit = (wager_amount * (100 - self.flip_fee.read()) / 100) * success_count;
                 match self.get_token_support(erc20_name) {
                     Option::Some(_token_address) => {
