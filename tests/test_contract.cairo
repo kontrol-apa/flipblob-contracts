@@ -160,7 +160,7 @@ fn approve_and_mint(ref erc20_safe_dispatcher:IERC20SafeDispatcher, flip_contrac
 }
 
 fn calculate_payout (ref flip_safe_dispatcher: IFlipSafeDispatcher, wager:u256, success_count:u256 ) -> u256 {
-    (wager * (100 - flip_safe_dispatcher.get_flip_fee().unwrap()) / 100) * success_count + wager * success_count
+    ((wager * (100 - flip_safe_dispatcher.get_flip_fee().unwrap()) / 100) * success_count) + (wager * success_count)  // (PROFIT) + (INITIAL_DEPOSIT) 
 
 }
 #[test]
