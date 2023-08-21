@@ -1,3 +1,12 @@
+
+
+const HEAD: u256 = 1;
+const TAIL: u256 = 0;
+const INVALID: u256 = 2;
+
+
+mod tests {
+
 use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
 use result::ResultTrait;
 use option::OptionTrait;
@@ -186,7 +195,7 @@ fn test_single_erc20() {
     let bet = 1000000;
     let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
     start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
-    flip_safe_dispatcher.issue_request(1, bet, 1, 'METH');
+    flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'METH');
     stop_prank(flip_contract_address);
 
     let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
@@ -204,7 +213,7 @@ fn test_single_erc20() {
     assert((post_balance - pre_balance ) == calculate_payout(ref flip_safe_dispatcher, bet, 1), 'Balances dont match!'  );
 
     start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
-    match flip_safe_dispatcher.issue_request(1, bet, 2, 'METH') {
+    match flip_safe_dispatcher.issue_request(1, bet, super::INVALID, 'METH') {
        Result::Ok(_) => 'done'.print(),
        Result::Err(panic_data) => {
             assert(*panic_data.at(0) == 'Unsupported Coin Face.', *panic_data.at(0));
@@ -241,7 +250,7 @@ fn test_double_erc20() {
     let mut bet = 1000000;
     let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
     start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
-    flip_safe_dispatcher.issue_request(1, bet, 1, 'METH');
+    flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'METH');
     stop_prank(flip_contract_address);
 
     let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
@@ -262,7 +271,7 @@ fn test_double_erc20() {
     bet = 11000000;
     let pre_bet_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap(); 
     start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
-    flip_safe_dispatcher.issue_request(1, bet, 1, 'USDC');
+    flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'USDC');
     stop_prank(flip_contract_address);
 
     let pre_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap(); 
@@ -281,14 +290,14 @@ fn test_double_erc20() {
     index = index ;
     bet = 11000000;
     start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
-    match flip_safe_dispatcher.issue_request(1, bet, 2, 'METH') {
+    match flip_safe_dispatcher.issue_request(1, bet, super::INVALID, 'METH') {
        Result::Ok(_) => 'done'.print(),
        Result::Err(panic_data) => {
             assert(*panic_data.at(0) == 'Unsupported Coin Face.', *panic_data.at(0));
        }
     }
 
-    match flip_safe_dispatcher.issue_request(1, bet, 1, 'USDC') {
+    match flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'USDC') {
        Result::Ok(_) => 'done'.print(),
        Result::Err(panic_data) => {
             (*panic_data.at(0)).print();
@@ -348,7 +357,7 @@ fn test_multi_bet() {
     let mut times = 10;
     let mut pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
     start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
-    flip_safe_dispatcher.issue_request(times, bet, 0, 'METH');
+    flip_safe_dispatcher.issue_request(times, bet, super::TAIL, 'METH');
     stop_prank(flip_contract_address);
 
     let mut pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
@@ -371,7 +380,7 @@ fn test_multi_bet() {
     index = index + 1;
     pre_bet_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap(); 
     start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
-    flip_safe_dispatcher.issue_request(times, bet, 0, 'USDC');
+    flip_safe_dispatcher.issue_request(times, bet, super::TAIL, 'USDC');
     stop_prank(flip_contract_address);
 
     pre_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap(); 
@@ -391,3 +400,4 @@ fn test_multi_bet() {
 
 }
 
+}
