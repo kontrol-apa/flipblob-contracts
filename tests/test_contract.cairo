@@ -159,7 +159,10 @@ fn approve_and_mint(ref erc20_safe_dispatcher:IERC20SafeDispatcher, flip_contrac
     stop_prank(*erc20_contract_address);
 }
 
+fn calculate_payout (ref flip_safe_dispatcher: IFlipSafeDispatcher, wager:u256, success_count:u256 ) -> u256 {
+    (wager * (100 - flip_safe_dispatcher.get_flip_fee().unwrap()) / 100) * success_count + wager * success_count
 
+}
 #[test]
 fn test_single_erc20() {
     let (flip_contract_address, meth_contract_address) = deploy_flip_and_mocketh();
@@ -198,7 +201,7 @@ fn test_single_erc20() {
 
     let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
 
-    assert((post_balance - pre_balance ) == (2 * bet - bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100), 'Balances dont match!'  );
+    assert((post_balance - pre_balance ) == calculate_payout(ref flip_safe_dispatcher, bet, 1), 'Balances dont match!'  );
 
     start_prank(flip_contract_address,common::user());  // MOCK USER TO FLIP
     match flip_safe_dispatcher.issue_request(1, bet, 2, 'METH') {
@@ -252,7 +255,7 @@ fn test_double_erc20() {
     }
 
     let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
-    assert((post_balance - pre_balance ) == (2 * bet - bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100), 'Balances dont match!');
+    assert((post_balance - pre_balance ) == calculate_payout(ref flip_safe_dispatcher, bet, 1), 'Balances dont match!');
 
 
     index = index + 1;
@@ -273,7 +276,7 @@ fn test_double_erc20() {
     }
 
     let post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap(); 
-    assert((post_balance - pre_balance ) == (2 * bet - bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100), 'Balances dont match!');
+    assert((post_balance - pre_balance ) == calculate_payout(ref flip_safe_dispatcher, bet, 1), 'Balances dont match!');
 
     index = index ;
     bet = 11000000;
@@ -361,7 +364,7 @@ fn test_multi_bet() {
     assert (state == 1 , 'Transaction must be finalized!');
     assert (success_count <= times , 'Count greater than the amount');
     let mut post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap(); 
-    assert((post_balance - pre_balance ) == (success_count *( 2 * bet - bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100)), 'Balances dont match!');
+    assert((post_balance - pre_balance ) == calculate_payout(ref flip_safe_dispatcher, bet, success_count), 'Balances dont match!');
 
     bet = 555555;
     times = 3;
@@ -383,7 +386,8 @@ fn test_multi_bet() {
     assert (state == 1 , 'Transaction must be finalized!');
     assert (success_count <= times , 'Count greater than the amount');
     post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
-    // assert(((post_balance - pre_balance) - success_count *( 2 * bet - bet * (flip_safe_dispatcher.get_flip_fee().unwrap())/100)) < 10, 'Balances dont match!');
+    assert((post_balance - pre_balance ) == calculate_payout(ref flip_safe_dispatcher, bet, success_count), 'Balances donta match!');
+
 
 }
 
