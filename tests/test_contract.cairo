@@ -246,13 +246,14 @@ mod tests {
         }
 
         let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
-let (state, success_count) = flip_safe_dispatcher
+        let (state, success_count) = flip_safe_dispatcher
             .get_request_final_state(*request_ids.at(index))
             .unwrap();
         assert(state == 1, 'Transaction must be finalized!');
 
         assert(
-            (post_balance - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
+            (post_balance
+                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
             'Balances dont match!'
         );
 
@@ -331,14 +332,15 @@ let (state, success_count) = flip_safe_dispatcher
                 (*panic_data.at(0)).print();
             }
         }
-    let (state, success_count) = flip_safe_dispatcher
+        let (state, success_count) = flip_safe_dispatcher
             .get_request_final_state(*request_ids.at(index))
             .unwrap();
         assert(state == 1, 'Transaction must be finalized!');
 
         let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
         assert(
-            (post_balance - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
+            (post_balance
+                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
             'Balances dont match!'
         );
 
@@ -366,7 +368,8 @@ let (state, success_count) = flip_safe_dispatcher
 
         let post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
         assert(
-            (post_balance - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
+            (post_balance
+                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
             'Balances dont match!'
         );
 
