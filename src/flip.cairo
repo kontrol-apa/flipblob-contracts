@@ -243,7 +243,7 @@ mod Flip {
                     Option::Some(_token_address) => {
                         ERC20Dispatcher {
                         contract_address: _token_address
-                        }.transferFrom(self.treasury_address.read(), user_address_felt252, (wager_amount/times*success_count + profit));
+                        }.transferFrom(self.treasury_address.read(), user_address_felt252, (wager_amount*success_count + profit));
                         
                         self.last_request_id_finalized.write(requestId);
                         self.request_success_count.write(requestId, success_count); // modify for multiple flips
