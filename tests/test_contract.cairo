@@ -185,8 +185,12 @@ mod tests {
     fn calculate_payout(
         ref flip_safe_dispatcher: IFlipSafeDispatcher, wager: u256, success_count: u256
     ) -> u256 {
-        ((wager * (100 - flip_safe_dispatcher.get_flip_fee().unwrap()) / 100) * success_count)
-            + (wager * success_count) // (PROFIT) + (INITIAL_DEPOSIT) 
+        if success_count > 0 {
+            ((wager * (100 - flip_safe_dispatcher.get_flip_fee().unwrap()) / 100) * success_count)
+                + (wager * success_count) // (PROFIT) + (INITIAL_DEPOSIT) 
+        } else {
+            0
+        }
     }
     #[test]
     fn test_single_erc20() {
@@ -242,9 +246,13 @@ mod tests {
         }
 
         let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+let (state, success_count) = flip_safe_dispatcher
+            .get_request_final_state(*request_ids.at(index))
+            .unwrap();
+        assert(state == 1, 'Transaction must be finalized!');
 
         assert(
-            (post_balance - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, 1),
+            (post_balance - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
             'Balances dont match!'
         );
 
@@ -323,10 +331,14 @@ mod tests {
                 (*panic_data.at(0)).print();
             }
         }
+    let (state, success_count) = flip_safe_dispatcher
+            .get_request_final_state(*request_ids.at(index))
+            .unwrap();
+        assert(state == 1, 'Transaction must be finalized!');
 
         let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
         assert(
-            (post_balance - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, 1),
+            (post_balance - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
             'Balances dont match!'
         );
 
@@ -347,10 +359,14 @@ mod tests {
                 (*panic_data.at(0)).print();
             }
         }
+        let (state, success_count) = flip_safe_dispatcher
+            .get_request_final_state(*request_ids.at(index))
+            .unwrap();
+        assert(state == 1, 'Transaction must be finalized!');
 
         let post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
         assert(
-            ((post_balance - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, 1)) | (post_balance == pre_balance),
+            (post_balance - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
             'Balances dont match!'
         );
 
@@ -481,7 +497,7 @@ mod tests {
         index = index + 1;
         pre_bet_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        flip_safe_dispatcher.issue_request(times, bet, super::TAIL, 'USDC');
+        flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'USDC');
         stop_prank(flip_contract_address);
 
         pre_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
