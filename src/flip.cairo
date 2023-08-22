@@ -27,7 +27,7 @@ trait IFlip<TContractState> {
     fn owner(self: @TContractState) -> ContractAddress;
     fn set_flip_fee(ref self: TContractState, newFee: u256);
     fn get_flip_fee(self: @TContractState) -> u256;
-    fn set_token_support(ref self: TContractState, tokenName: felt252, tokenAddr: ContractAddress);
+    fn set_token_support(ref self: TContractState, tokenName: felt252, tokenAddress: ContractAddress, maxBetable: u256);
     fn is_token_supported(self: @TContractState, tokenName: felt252) -> bool;
     fn get_token_address(self: @TContractState, tokenName: felt252) -> ContractAddress;
     fn update_treasury(ref self: TContractState, treasuryAddress: felt252);
@@ -61,7 +61,7 @@ mod Flip {
         requestStatus: LegacyMap<felt252, felt252>,
         request_success_count: LegacyMap<felt252, u256>,
         fair_random_numbers: LegacyMap<felt252, u256>,
-        supported_erc20: LegacyMap<felt252, ContractAddress>,
+        supported_erc20: LegacyMap<felt252, tokenMetadata>,
         treasury_address: felt252,
         flip_fee: u256,
     }
@@ -73,6 +73,12 @@ mod Flip {
         wager_amount: u256,
         chosen_coin_face: u256,
         token: felt252
+    }
+
+    #[derive(Copy, Drop, Serde, starknet::Store)]
+    struct tokenMetadata {
+        tokenAddress: ContractAddress,
+        maxBetable: u256
     }
 
     #[event]
@@ -121,11 +127,11 @@ mod Flip {
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
         fn get_token_support(self: @ContractState, tokenName: felt252) -> Option<ContractAddress> {
-            let tokenAddress = self.supported_erc20.read(tokenName);
-            if tokenAddress.is_zero() {
+            let tokenMetadata = self.supported_erc20.read(tokenName);
+            if tokenMetadata.tokenAddress.is_zero() {
                 return Option::None(());
             } else {
-                return Option::Some(tokenAddress);
+                return Option::Some(tokenMetadata.tokenAddress);
             }
         }
     }
@@ -321,16 +327,16 @@ mod Flip {
         }
 
         fn set_token_support(
-            ref self: ContractState, tokenName: felt252, tokenAddr: ContractAddress
+            ref self: ContractState, tokenName: felt252, tokenAddress: ContractAddress, maxBetable: u256
         ) {
             let ownable = Ownable::unsafe_new_contract_state();
             InternalImpl::assert_only_owner(@ownable);
-            self.supported_erc20.write(tokenName, tokenAddr);
+            self.supported_erc20.write(tokenName, tokenMetadata{tokenAddress, maxBetable});
         }
 
         fn is_token_supported(self: @ContractState, tokenName: felt252) -> bool {
-            let tokenAddress = self.supported_erc20.read(tokenName);
-            if tokenAddress.is_zero() {
+            let tokenMetadata = self.supported_erc20.read(tokenName);
+            if tokenMetadata.tokenAddress.is_zero() {
                 return false;
             } else {
                 return true;
@@ -338,7 +344,7 @@ mod Flip {
         }
 
         fn get_token_address(self: @ContractState, tokenName: felt252) -> ContractAddress {
-            self.supported_erc20.read(tokenName)
+            self.supported_erc20.read(tokenName).tokenAddress
         }
 
 
