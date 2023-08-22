@@ -27,7 +27,12 @@ trait IFlip<TContractState> {
     fn owner(self: @TContractState) -> ContractAddress;
     fn set_flip_fee(ref self: TContractState, newFee: u256);
     fn get_flip_fee(self: @TContractState) -> u256;
-    fn set_token_support(ref self: TContractState, tokenName: felt252, tokenAddress: ContractAddress, maxBetable: u256);
+    fn set_token_support(
+        ref self: TContractState,
+        tokenName: felt252,
+        tokenAddress: ContractAddress,
+        maxBetable: u256
+    );
     fn is_token_supported(self: @TContractState, tokenName: felt252) -> bool;
     fn get_token_address(self: @TContractState, tokenName: felt252) -> ContractAddress;
     fn update_treasury(ref self: TContractState, treasuryAddress: felt252);
@@ -213,9 +218,8 @@ mod Flip {
             assert((times > 0) && (times <= 10), 'Invalid amount.');
             match self.get_token_support(erc20_name) {
                 Option::Some(token_metadata) => {
-
                     assert(token_metadata.maxBetable > wager_amount, 'Wager too high');
-                    
+
                     let treasuryBalance = ERC20Dispatcher {
                         contract_address: token_metadata.tokenAddress
                     }.balance_of(self.treasury_address.read());
@@ -336,11 +340,14 @@ mod Flip {
         }
 
         fn set_token_support(
-            ref self: ContractState, tokenName: felt252, tokenAddress: ContractAddress, maxBetable: u256
+            ref self: ContractState,
+            tokenName: felt252,
+            tokenAddress: ContractAddress,
+            maxBetable: u256
         ) {
             let ownable = Ownable::unsafe_new_contract_state();
             InternalImpl::assert_only_owner(@ownable);
-            self.supported_erc20.write(tokenName, tokenMetadata{tokenAddress, maxBetable });
+            self.supported_erc20.write(tokenName, tokenMetadata { tokenAddress, maxBetable });
         }
 
         fn is_token_supported(self: @ContractState, tokenName: felt252) -> bool {
