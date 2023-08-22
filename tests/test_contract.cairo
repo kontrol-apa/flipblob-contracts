@@ -137,7 +137,6 @@ mod tests {
             .get_token_address(token_name)
             .unwrap();
         assert(querried_erc20_contract_address == *erc20_contract_address, 'Addresses Must Match!');
-        querried_erc20_contract_address.print();
         let is_supported: bool = flip_safe_dispatcher.is_token_supported('MATIC').unwrap();
         assert(is_supported == false, 'MATIC is Not Supported!');
     }
@@ -203,12 +202,15 @@ mod tests {
             contract_address: meth_contract_address
         };
 
-        let max_bet_amount_meth = 100000000000000000;
+        let max_bet_amount_meth: u256 = 100000000000000000;
         set_token_support(
-            ref flip_safe_dispatcher, @flip_contract_address, @meth_contract_address, 'METH', max_bet_amount_meth
+            ref flip_safe_dispatcher,
+            @flip_contract_address,
+            @meth_contract_address,
+            max_bet_amount_meth,
+            'METH'
         );
-        flip_safe_dispatcher.get_token_address('METH').unwrap().print();
-        flip_safe_dispatcher.is_token_supported('METH').unwrap().print();
+
         let mut request_ids: Array<felt252> = ArrayTrait::new();
         let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
         let mut random_numbers = ArrayTrait::<u256>::new();
@@ -233,326 +235,333 @@ mod tests {
         let index = 0;
         let bet = 1000000;
         let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
-        flip_safe_dispatcher.get_token_address('METH').unwrap().print();
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        match flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'METH') 
-        {
-            Result::Ok(_) => 'Passeds.'.print(),
+        flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'METH');
+        stop_prank(flip_contract_address);
+
+        let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        assert((pre_bet_balance - pre_balance) == (bet), '1Balances dont match!');
+
+        match flip_safe_dispatcher
+            .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
+            Result::Ok(_) => 'Passed.'.print(),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+                assert(*panic_data.at(0) == 'Request already finalized', *panic_data.at(0));
+            }
+        }
+
+        let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        let (state, success_count) = flip_safe_dispatcher
+            .get_request_final_state(*request_ids.at(index))
+            .unwrap();
+        assert(state == 1, 'Transaction must be finalized!');
+
+        assert(
+            (post_balance
+                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
+            '2Balances dont match!'
+        );
+
+        start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
+        match flip_safe_dispatcher.issue_request(1, bet, super::INVALID, 'METH') {
+            Result::Ok(_) => 'Passed.'.print(),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+                assert(*panic_data.at(0) == 'Unsupported Coin Face.', *panic_data.at(0));
+            }
+        }
+        stop_prank(flip_contract_address);
+    }
+
+    #[test]
+    fn test_double_erc20() {
+        let (flip_contract_address, meth_contract_address, usdc_contract_address) =
+            deploy_flip_and_mocketh_usdc();
+        let mut flip_safe_dispatcher = IFlipSafeDispatcher {
+            contract_address: flip_contract_address
+        };
+        let mut meth_safe_dispatcher = IERC20SafeDispatcher {
+            contract_address: meth_contract_address
+        };
+        let mut usdc_safe_dispatcher = IERC20SafeDispatcher {
+            contract_address: usdc_contract_address
+        };
+        let max_bet_amount_meth = 100000000000000000;
+        let max_bet_amount_usdc = 100000000000000000000;
+
+        set_token_support(
+            ref flip_safe_dispatcher,
+            @flip_contract_address,
+            @meth_contract_address,
+            max_bet_amount_meth,
+            'METH'
+        );
+        set_token_support(
+            ref flip_safe_dispatcher,
+            @flip_contract_address,
+            @usdc_contract_address,
+            max_bet_amount_usdc,
+            'USDC'
+        );
+
+        let mut request_ids: Array<felt252> = ArrayTrait::new();
+        let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
+        let mut random_numbers = ArrayTrait::<u256>::new();
+        prepare_rng(
+            ref flip_safe_dispatcher,
+            ref request_ids,
+            ref fair_random_number_hashes,
+            ref random_numbers
+        );
+
+        start_prank(flip_contract_address, common::admin()); // MOCK ADMIN TO WRITE FAIR RNG
+        flip_safe_dispatcher.write_fair_rng_batch(request_ids.span(), fair_random_number_hashes);
+        stop_prank(flip_contract_address);
+
+        approve_and_mint(
+            ref meth_safe_dispatcher,
+            @flip_contract_address,
+            @meth_contract_address,
+            100000000000000000000
+        );
+        approve_and_mint(
+            ref usdc_safe_dispatcher,
+            @flip_contract_address,
+            @usdc_contract_address,
+            10000000000000000000
+        );
+
+        let mut index = 0;
+        let mut bet = 1000000;
+        let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
+        flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'METH');
+        stop_prank(flip_contract_address);
+
+        let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
+
+        match flip_safe_dispatcher
+            .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
+            Result::Ok(_) => 'Passed.'.print(),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+            }
+        }
+        let (state, success_count) = flip_safe_dispatcher
+            .get_request_final_state(*request_ids.at(index))
+            .unwrap();
+        assert(state == 1, 'Transaction must be finalized!');
+
+        let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        assert(
+            (post_balance
+                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
+            'Balances dont match!'
+        );
+
+        index = index + 1;
+        bet = 11000000;
+        let pre_bet_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
+        start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
+        flip_safe_dispatcher.issue_request(1, bet, super::TAIL, 'USDC');
+        stop_prank(flip_contract_address);
+
+        let pre_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
+        assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
+
+        match flip_safe_dispatcher
+            .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
+            Result::Ok(_) => 'Passed.'.print(),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+            }
+        }
+        let (state, success_count) = flip_safe_dispatcher
+            .get_request_final_state(*request_ids.at(index))
+            .unwrap();
+        assert(state == 1, 'Transaction must be finalized!');
+
+        let post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
+        assert(
+            (post_balance
+                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
+            'Balances dont match!'
+        );
+
+        index = index;
+        bet = 11000000;
+        start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
+        match flip_safe_dispatcher.issue_request(1, bet, super::INVALID, 'METH') {
+            Result::Ok(_) => 'Passed.'.print(),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+                assert(*panic_data.at(0) == 'Unsupported Coin Face.', *panic_data.at(0));
+            }
+        }
+
+        match flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'USDC') {
+            Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
             }
         }
         stop_prank(flip_contract_address);
 
-        let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
-        assert((pre_bet_balance - pre_balance) == (bet), '1Balances dont match!');
+        match flip_safe_dispatcher
+            .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
+            Result::Ok(_) => 'Passed.'.print(),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+                assert(*panic_data.at(0) == 'Request already finalized.', *panic_data.at(0));
+            }
+        }
 
-        // match flip_safe_dispatcher
-        //     .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-        //     Result::Ok(_) => 'Passed.'.print(),
-        //     Result::Err(panic_data) => {
-        //         (*panic_data.at(0)).print();
-        //         assert(*panic_data.at(0) == 'Request already finalized', *panic_data.at(0));
-        //     }
-        // }
+        match flip_safe_dispatcher
+            .finalize_request(*request_ids.at(index + 1), *random_numbers.at(index)) {
+            Result::Ok(_) => 'Passed.'.print(),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+                assert(*panic_data.at(0) == 'Wrong number.', *panic_data.at(0));
+            }
+        }
 
-        // let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
-        // let (state, success_count) = flip_safe_dispatcher
-        //     .get_request_final_state(*request_ids.at(index))
-        //     .unwrap();
-        // assert(state == 1, 'Transaction must be finalized!');
+        index = index + 1;
 
-        // assert(
-        //     (post_balance
-        //         - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
-        //     '2Balances dont match!'
-        // );
-
-        // start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        // match flip_safe_dispatcher.issue_request(1, bet, super::INVALID, 'METH') {
-        //     Result::Ok(_) => 'Passed.'.print(),
-        //     Result::Err(panic_data) => {
-        //         (*panic_data.at(0)).print();
-        //         assert(*panic_data.at(0) == 'Unsupported Coin Face.', *panic_data.at(0));
-        //     }
-        // }
-        // stop_prank(flip_contract_address);
+        match flip_safe_dispatcher
+            .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
+            Result::Ok(_) => 'Passed.'.print(),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+            }
+        }
     }
+    #[test]
+    fn test_multi_bet() {
+        let (flip_contract_address, meth_contract_address, usdc_contract_address) =
+            deploy_flip_and_mocketh_usdc();
+        let mut flip_safe_dispatcher = IFlipSafeDispatcher {
+            contract_address: flip_contract_address
+        };
+        let mut meth_safe_dispatcher = IERC20SafeDispatcher {
+            contract_address: meth_contract_address
+        };
+        let mut usdc_safe_dispatcher = IERC20SafeDispatcher {
+            contract_address: usdc_contract_address
+        };
+        let max_bet_amount_meth = 100000000000000000;
+        let max_bet_amount_usdc = 100000000000000000000;
+        set_token_support(
+            ref flip_safe_dispatcher,
+            @flip_contract_address,
+            @meth_contract_address,
+            max_bet_amount_meth,
+            'METH'
+        );
+        set_token_support(
+            ref flip_safe_dispatcher,
+            @flip_contract_address,
+            @usdc_contract_address,
+            max_bet_amount_usdc,
+            'USDC'
+        );
 
-//     #[test]
-//     fn test_double_erc20() {
-//         let (flip_contract_address, meth_contract_address, usdc_contract_address) =
-//             deploy_flip_and_mocketh_usdc();
-//         let mut flip_safe_dispatcher = IFlipSafeDispatcher {
-//             contract_address: flip_contract_address
-//         };
-//         let mut meth_safe_dispatcher = IERC20SafeDispatcher {
-//             contract_address: meth_contract_address
-//         };
-//         let mut usdc_safe_dispatcher = IERC20SafeDispatcher {
-//             contract_address: usdc_contract_address
-//         };
-//         let max_bet_amount_meth = 100000000000000000;
-//         let max_bet_amount_usdc = 100000000000000000000;
+        let mut request_ids: Array<felt252> = ArrayTrait::new();
+        let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
+        let mut random_numbers = ArrayTrait::<u256>::new();
+        prepare_rng(
+            ref flip_safe_dispatcher,
+            ref request_ids,
+            ref fair_random_number_hashes,
+            ref random_numbers
+        );
 
-//         set_token_support(
-//             ref flip_safe_dispatcher, @flip_contract_address, @meth_contract_address, 'METH',max_bet_amount_meth
-//         );
-//         set_token_support(
-//             ref flip_safe_dispatcher, @flip_contract_address, @usdc_contract_address, 'USDC',max_bet_amount_usdc
-//         );
+        start_prank(flip_contract_address, common::admin()); // MOCK ADMIN TO WRITE FAIR RNG
+        flip_safe_dispatcher.write_fair_rng_batch(request_ids.span(), fair_random_number_hashes);
+        stop_prank(flip_contract_address);
 
-//         let mut request_ids: Array<felt252> = ArrayTrait::new();
-//         let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
-//         let mut random_numbers = ArrayTrait::<u256>::new();
-//         prepare_rng(
-//             ref flip_safe_dispatcher,
-//             ref request_ids,
-//             ref fair_random_number_hashes,
-//             ref random_numbers
-//         );
+        approve_and_mint(
+            ref meth_safe_dispatcher,
+            @flip_contract_address,
+            @meth_contract_address,
+            10000000000000000000000
+        );
+        approve_and_mint(
+            ref usdc_safe_dispatcher,
+            @flip_contract_address,
+            @usdc_contract_address,
+            1000000000000000000000
+        );
 
-//         start_prank(flip_contract_address, common::admin()); // MOCK ADMIN TO WRITE FAIR RNG
-//         flip_safe_dispatcher.write_fair_rng_batch(request_ids.span(), fair_random_number_hashes);
-//         stop_prank(flip_contract_address);
+        let mut index = 0;
+        let mut bet = 10000000;
+        let mut times = 10;
+        let mut pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
+        flip_safe_dispatcher.issue_request(times, bet, super::TAIL, 'METH');
+        stop_prank(flip_contract_address);
 
-//         approve_and_mint(
-//             ref meth_safe_dispatcher,
-//             @flip_contract_address,
-//             @meth_contract_address,
-//             100000000000000000000
-//         );
-//         approve_and_mint(
-//             ref usdc_safe_dispatcher,
-//             @flip_contract_address,
-//             @usdc_contract_address,
-//             10000000000000000000
-//         );
+        let mut pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        assert((pre_bet_balance - pre_balance) == (bet * times), 'Issue Balances dont match!');
 
-//         let mut index = 0;
-//         let mut bet = 1000000;
-//         let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
-//         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-//         flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'METH');
-//         stop_prank(flip_contract_address);
+        match flip_safe_dispatcher
+            .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
+            Result::Ok(_) => 'Passed.'.print(),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+            }
+        }
+        let (state, success_count) = flip_safe_dispatcher
+            .get_request_final_state(*request_ids.at(index))
+            .unwrap();
+        assert(state == 1, 'Transaction must be finalized!');
+        assert(success_count <= times, 'Count greater than the amount');
+        let mut post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        assert(
+            (post_balance
+                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
+            'Balances dont match!'
+        );
 
-//         let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
-//         assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
+        bet = 555555;
+        times = 3;
+        index = index + 1;
+        pre_bet_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
+        start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
+        flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'USDC');
+        stop_prank(flip_contract_address);
 
-//         match flip_safe_dispatcher
-//             .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-//             Result::Ok(_) => 'Passed.'.print(),
-//             Result::Err(panic_data) => {
-//                 (*panic_data.at(0)).print();
-//             }
-//         }
-//         let (state, success_count) = flip_safe_dispatcher
-//             .get_request_final_state(*request_ids.at(index))
-//             .unwrap();
-//         assert(state == 1, 'Transaction must be finalized!');
+        pre_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
+        assert((pre_bet_balance - pre_balance) == (bet * times), 'Issue Balances dont match!');
+        match flip_safe_dispatcher
+            .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
+            Result::Ok(_) => 'Passed.'.print(),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+            }
+        }
+        let (state, success_count) = flip_safe_dispatcher
+            .get_request_final_state(*request_ids.at(index))
+            .unwrap();
+        assert(state == 1, 'Transaction must be finalized!');
+        assert(success_count <= times, 'Count greater than the amount');
+        post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
+        assert(
+            (post_balance
+                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
+            'Balances dont match!'
+        );
 
-//         let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
-//         assert(
-//             (post_balance
-//                 - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
-//             'Balances dont match!'
-//         );
-
-//         index = index + 1;
-//         bet = 11000000;
-//         let pre_bet_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
-//         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-//         flip_safe_dispatcher.issue_request(1, bet, super::TAIL, 'USDC');
-//         stop_prank(flip_contract_address);
-
-//         let pre_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
-//         assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
-
-//         match flip_safe_dispatcher
-//             .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-//             Result::Ok(_) => 'Passed.'.print(),
-//             Result::Err(panic_data) => {
-//                 (*panic_data.at(0)).print();
-//             }
-//         }
-//         let (state, success_count) = flip_safe_dispatcher
-//             .get_request_final_state(*request_ids.at(index))
-//             .unwrap();
-//         assert(state == 1, 'Transaction must be finalized!');
-
-//         let post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
-//         assert(
-//             (post_balance
-//                 - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
-//             'Balances dont match!'
-//         );
-
-//         index = index;
-//         bet = 11000000;
-//         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-//         match flip_safe_dispatcher.issue_request(1, bet, super::INVALID, 'METH') {
-//             Result::Ok(_) => 'Passed.'.print(),
-//             Result::Err(panic_data) => {
-//                 (*panic_data.at(0)).print();
-//                 assert(*panic_data.at(0) == 'Unsupported Coin Face.', *panic_data.at(0));
-//             }
-//         }
-
-//         match flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'USDC') {
-//             Result::Ok(_) => 'Passed.'.print(),
-//             Result::Err(panic_data) => {
-//                 (*panic_data.at(0)).print();
-//             }
-//         }
-//         stop_prank(flip_contract_address);
-
-//         match flip_safe_dispatcher
-//             .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-//             Result::Ok(_) => 'Passed.'.print(),
-//             Result::Err(panic_data) => {
-//                 (*panic_data.at(0)).print();
-//                 assert(*panic_data.at(0) == 'Request already finalized.', *panic_data.at(0));
-//             }
-//         }
-
-//         match flip_safe_dispatcher
-//             .finalize_request(*request_ids.at(index + 1), *random_numbers.at(index)) {
-//             Result::Ok(_) => 'Passed.'.print(),
-//             Result::Err(panic_data) => {
-//                 (*panic_data.at(0)).print();
-//                 assert(*panic_data.at(0) == 'Wrong number.', *panic_data.at(0));
-//             }
-//         }
-
-//         index = index + 1;
-
-//         match flip_safe_dispatcher
-//             .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-//             Result::Ok(_) => 'Passed.'.print(),
-//             Result::Err(panic_data) => {
-//                 (*panic_data.at(0)).print();
-//             }
-//         }
-//     }
-//     #[test]
-//     fn test_multi_bet() {
-//         let (flip_contract_address, meth_contract_address, usdc_contract_address) =
-//             deploy_flip_and_mocketh_usdc();
-//         let mut flip_safe_dispatcher = IFlipSafeDispatcher {
-//             contract_address: flip_contract_address
-//         };
-//         let mut meth_safe_dispatcher = IERC20SafeDispatcher {
-//             contract_address: meth_contract_address
-//         };
-//         let mut usdc_safe_dispatcher = IERC20SafeDispatcher {
-//             contract_address: usdc_contract_address
-//         };
-//         let max_bet_amount_meth = 100000000000000000;
-//         let max_bet_amount_usdc = 100000000000000000000;
-//         set_token_support(
-//             ref flip_safe_dispatcher, @flip_contract_address, @meth_contract_address, 'METH', max_bet_amount_meth
-//         );
-//         set_token_support(
-//             ref flip_safe_dispatcher, @flip_contract_address, @usdc_contract_address, 'USDC', max_bet_amount_usdc
-//         );
-
-//         let mut request_ids: Array<felt252> = ArrayTrait::new();
-//         let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
-//         let mut random_numbers = ArrayTrait::<u256>::new();
-//         prepare_rng(
-//             ref flip_safe_dispatcher,
-//             ref request_ids,
-//             ref fair_random_number_hashes,
-//             ref random_numbers
-//         );
-
-//         start_prank(flip_contract_address, common::admin()); // MOCK ADMIN TO WRITE FAIR RNG
-//         flip_safe_dispatcher.write_fair_rng_batch(request_ids.span(), fair_random_number_hashes);
-//         stop_prank(flip_contract_address);
-
-//         approve_and_mint(
-//             ref meth_safe_dispatcher,
-//             @flip_contract_address,
-//             @meth_contract_address,
-//             10000000000000000000000
-//         );
-//         approve_and_mint(
-//             ref usdc_safe_dispatcher,
-//             @flip_contract_address,
-//             @usdc_contract_address,
-//             1000000000000000000000
-//         );
-
-//         let mut index = 0;
-//         let mut bet = 10000000;
-//         let mut times = 10;
-//         let mut pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
-//         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-//         flip_safe_dispatcher.issue_request(times, bet, super::TAIL, 'METH');
-//         stop_prank(flip_contract_address);
-
-//         let mut pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
-//         assert((pre_bet_balance - pre_balance) == (bet * times), 'Issue Balances dont match!');
-
-//         match flip_safe_dispatcher
-//             .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-//             Result::Ok(_) => 'Passed.'.print(),
-//             Result::Err(panic_data) => {
-//                 (*panic_data.at(0)).print();
-//             }
-//         }
-//         let (state, success_count) = flip_safe_dispatcher
-//             .get_request_final_state(*request_ids.at(index))
-//             .unwrap();
-//         assert(state == 1, 'Transaction must be finalized!');
-//         assert(success_count <= times, 'Count greater than the amount');
-//         let mut post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
-//         assert(
-//             (post_balance
-//                 - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
-//             'Balances dont match!'
-//         );
-
-//         bet = 555555;
-//         times = 3;
-//         index = index + 1;
-//         pre_bet_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
-//         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-//         flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'USDC');
-//         stop_prank(flip_contract_address);
-
-//         pre_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
-//         assert((pre_bet_balance - pre_balance) == (bet * times), 'Issue Balances dont match!');
-//         match flip_safe_dispatcher
-//             .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-//             Result::Ok(_) => 'Passed.'.print(),
-//             Result::Err(panic_data) => {
-//                 (*panic_data.at(0)).print();
-//             }
-//         }
-//         let (state, success_count) = flip_safe_dispatcher
-//             .get_request_final_state(*request_ids.at(index))
-//             .unwrap();
-//         assert(state == 1, 'Transaction must be finalized!');
-//         assert(success_count <= times, 'Count greater than the amount');
-//         post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
-//         assert(
-//             (post_balance
-//                 - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
-//             'Balances dont match!'
-//         );
-        
-//         times = 11;
-//         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-//         match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'METH') {
-//             Result::Ok(_) => 'Passed.'.print(),
-//             Result::Err(panic_data) => {
-//                 (*panic_data.at(0)).print();
-//                 assert(*panic_data.at(0) == 'Invalid amount.', *panic_data.at(0));
-//             }
-//         }
-//         stop_prank(flip_contract_address);
-
-        
-    // }
+        times = 11;
+        start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
+        match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'METH') {
+            Result::Ok(_) => 'Passed.'.print(),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+                assert(*panic_data.at(0) == 'Invalid amount.', *panic_data.at(0));
+            }
+        }
+        stop_prank(flip_contract_address);
+    }
 }
