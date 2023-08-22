@@ -126,12 +126,12 @@ mod Flip {
 
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
-        fn get_token_support(self: @ContractState, tokenName: felt252) -> Option<ContractAddress> {
+        fn get_token_support(self: @ContractState, tokenName: felt252) -> Option<tokenMetadata> {
             let tokenMetadata = self.supported_erc20.read(tokenName);
             if tokenMetadata.tokenAddress.is_zero() {
                 return Option::None(());
             } else {
-                return Option::Some(tokenMetadata.tokenAddress);
+                return Option::Some(tokenMetadata);
             }
         }
     }
@@ -212,9 +212,11 @@ mod Flip {
             assert((times > 0) && (times <= 10), 'Invalid amount.');
 
             match self.get_token_support(erc20_name) {
-                Option::Some(_token_address) => {
+                Option::Some(token_metadata) => {
+
+                    assert(token_metadata.maxBetable > wager_amount, 'Wager too high');
                     ERC20Dispatcher {
-                        contract_address: _token_address
+                        contract_address: token_metadata.tokenAddress
                     }.transferFrom(issuer, self.treasury_address.read(), wager_amount * times);
                     let current_request_id: felt252 = self.next_request_id.read();
                     self.next_request_id.write(current_request_id + 1); // increment
@@ -292,9 +294,9 @@ mod Flip {
             if (success) {
                 profit = (wager_amount * (100 - self.flip_fee.read()) / 100) * success_count;
                 match self.get_token_support(erc20_name) {
-                    Option::Some(_token_address) => {
+                    Option::Some(token_metadata) => {
                         ERC20Dispatcher {
-                            contract_address: _token_address
+                            contract_address: token_metadata.tokenAddress
                         }
                             .transferFrom(
                                 self.treasury_address.read(),
