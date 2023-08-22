@@ -159,6 +159,9 @@ mod Flip {
         ) {
             let ownable = Ownable::unsafe_new_contract_state();
             InternalImpl::assert_only_owner(@ownable);
+            let request_status = self.requestStatus.read(request_id);
+            assert(request_status == 0, 'Request is Finalized.');
+
             self.fair_random_numbers.write(request_id, fair_random_number_hash);
         }
         fn write_fair_rng_batch(
@@ -172,8 +175,9 @@ mod Flip {
             let mut index: usize = 0;
             loop {
                 let request_id = *request_ids.at(index);
-                let fair_random_number_hash = *fair_random_number_hashes.at(index);
-                self.fair_random_numbers.write(request_id, fair_random_number_hash);
+                let request_status = self.requestStatus.read(request_id);
+                assert(request_status == 0, 'Request is Finalized.');
+                self.fair_random_numbers.write(request_id, *fair_random_number_hashes.at(index));
                 index += 1;
                 if request_ids.len() == index {
                     break;
