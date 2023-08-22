@@ -37,6 +37,8 @@ trait IFlip<TContractState> {
     fn get_token_address(self: @TContractState, tokenName: felt252) -> ContractAddress;
     fn update_treasury(ref self: TContractState, treasuryAddress: felt252);
     fn get_request_final_state(self: @TContractState, request_id: felt252) -> (felt252, u256);
+
+    fn set_max_bet(ref self: TContractState, tokenName: felt252, maxBetable: u256);
 }
 
 #[starknet::interface]
@@ -348,6 +350,14 @@ mod Flip {
             let ownable = Ownable::unsafe_new_contract_state();
             InternalImpl::assert_only_owner(@ownable);
             self.supported_erc20.write(tokenName, tokenMetadata { tokenAddress, maxBetable });
+        }
+
+        fn set_max_bet(ref self: ContractState, tokenName: felt252, maxBetable: u256) {
+            let ownable = Ownable::unsafe_new_contract_state();
+            InternalImpl::assert_only_owner(@ownable);
+            let mut tokenMetadata = self.supported_erc20.read(tokenName);
+            tokenMetadata.maxBetable = maxBetable;
+            self.supported_erc20.write(tokenName, tokenMetadata);
         }
 
         fn is_token_supported(self: @ContractState, tokenName: felt252) -> bool {
