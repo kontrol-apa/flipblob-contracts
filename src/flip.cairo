@@ -37,6 +37,7 @@ trait IFlip<TContractState> {
 #[starknet::interface]
 trait ERC20<TContractState> {
     fn transferFrom(ref self: TContractState, sender: felt252, recipient: felt252, amount: u256);
+    fn balance_of(self: @TContractState, account: felt252) -> u256;
 }
 
 #[starknet::contract]
@@ -210,11 +211,17 @@ mod Flip {
             let issuer = starknet::contract_address_to_felt252(caller);
             assert(((toss_result == 0) || (toss_result == 1)), 'Unsupported Coin Face.');
             assert((times > 0) && (times <= 10), 'Invalid amount.');
-
             match self.get_token_support(erc20_name) {
                 Option::Some(token_metadata) => {
 
                     assert(token_metadata.maxBetable > wager_amount, 'Wager too high');
+                    
+                    let treasuryBalance = ERC20Dispatcher {
+                        contract_address: token_metadata.tokenAddress
+                    }.balance_of(self.treasury_address.read());
+
+                    assert(treasuryBalance >= wager_amount * times, 'Treasury cant accept the bet');
+
                     ERC20Dispatcher {
                         contract_address: token_metadata.tokenAddress
                     }.transferFrom(issuer, self.treasury_address.read(), wager_amount * times);
