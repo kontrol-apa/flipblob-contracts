@@ -331,7 +331,8 @@ mod Flip {
         ) {
             let ownable = Ownable::unsafe_new_contract_state();
             InternalImpl::assert_only_owner(@ownable);
-            self.supported_erc20.write(tokenName, tokenMetadata{tokenAddress, maxBetable});
+            let token_metadata = tokenMetadata {tokenAddress: tokenAddress, maxBetable: maxBetable };
+            self.supported_erc20.write(tokenName, token_metadata);
         }
 
         fn is_token_supported(self: @ContractState, tokenName: felt252) -> bool {
