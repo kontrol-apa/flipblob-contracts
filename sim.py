@@ -77,15 +77,20 @@ axs[2].legend()
 
 font = FontProperties()
 font.set_family('monospace')
-font.set_size(14)
+font.set_size(9)
 font.set_weight('bold')
-# Volume per Run
+
+axs[3].text(0.5, 0.9, f'Starting Treasury: ${START_TREASURY:.0f},  Bet Options: {BET_OPTIONS}', 
+            ha='center', va='center', fontproperties=font)
+axs[3].text(0.5, 0.8, f'House Edge: {HOUSE_EDGE*100}%,  Network Cost Per TX: ${NETWORK_COST}', 
+            ha='center', va='center', fontproperties=font)
 axs[3].axis('off') # Turn off axis
-axs[3].text(0.5, 0.7, f'Average Volume: ${average_volume:.0f}', 
+font.set_size(14)
+axs[3].text(0.5, 0.6, f'Average Volume: ${average_volume:.0f}', 
             ha='center', va='center', fontproperties=font)
 axs[3].text(0.5, 0.5, f'Bankruptcy: {bankruptcy_count:.0f}', 
             ha='center', va='center', fontproperties=font)
-axs[3].text(0.5, 0.3, f'Average Profit: ${average_profit:.0f}', 
+axs[3].text(0.5, 0.4, f'Average Profit: ${average_profit:.0f}', 
             ha='center', va='center', fontproperties=font)
 
 
