@@ -1,7 +1,6 @@
 import random
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
-import concurrent.futures
 
 NUM_SIMULATIONS = 100
 NUM_FLIPS = 10000
@@ -10,6 +9,7 @@ MAX_BET = 100
 BET_OPTIONS = [5, 10, 20, 50, 100]
 HOUSE_EDGE = 0.05
 NETWORK_COST = 0.5
+
 def simulate(_):
     treasury = START_TREASURY
     wins, losses, volumes = 0, 0, 0

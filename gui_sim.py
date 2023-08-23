@@ -8,18 +8,18 @@ def update_label(value, label_var):
     label_var.set(int(float(value)))
     
 def update_and_plot():
-    params = {
-        "NUM_SIMULATIONS": int(num_sims_slider.get()),
-        "NUM_FLIPS": int(num_flips_slider.get()),
-        "START_TREASURY": int(start_treasury_slider.get()),
-        "HOUSE_EDGE": house_edge_slider.get(),
-        "NETWORK_COST": network_cost_slider.get()
-    }
+    
+    cs.NUM_SIMULATIONS = int(num_sims_slider.get())
+    cs.NUM_FLIPS = int(num_flips_slider.get())
+    cs.START_TREASURY = int(start_treasury_slider.get())
+    cs.HOUSE_EDGE = house_edge_slider.get()
+    cs.NETWORK_COST = network_cost_slider.get()
+    
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        results = list(executor.map(cs.simulate, range(params["NUM_SIMULATIONS"])))
+        results = list(executor.map(cs.simulate, range(cs.NUM_SIMULATIONS)))
 
-    cs.plot_results(params["NUM_SIMULATIONS"], params["NUM_FLIPS"], params["START_TREASURY"], params["HOUSE_EDGE"], params["NETWORK_COST"], results)
+    cs.plot_results( cs.NUM_SIMULATIONS, cs.NUM_FLIPS, cs.START_TREASURY, cs.HOUSE_EDGE, cs.NETWORK_COST, results)
 
 def update_label(slider, label_var):
     label_var.set(int(slider.get()))
