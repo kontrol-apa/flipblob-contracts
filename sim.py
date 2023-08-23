@@ -41,6 +41,8 @@ def simulate(_):
 
 def plot_results(NUM_SIMULATIONS, NUM_FLIPS, START_TREASURY, HOUSE_EDGE, NETWORK_COST, results):
 
+    global fig  # Declare fig as global so it can be accessed from outside the function
+    fig, axs = plt.subplots(4, 1, figsize=(20,30))
     # Unpack the results into their individual components
     balances, lowest_balances, wins, losses, volumes, profits = zip(*results)
 
@@ -97,7 +99,6 @@ def plot_results(NUM_SIMULATIONS, NUM_FLIPS, START_TREASURY, HOUSE_EDGE, NETWORK
 
 
     plt.tight_layout()
-    plt.show()
 
 
 

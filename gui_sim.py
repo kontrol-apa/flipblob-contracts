@@ -4,6 +4,8 @@ import tkinter as tk
 from tkinter import ttk
 import concurrent.futures
 import sim as cs
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 def update_label(value, label_var):
     label_var.set(int(float(value)))
     
@@ -20,6 +22,14 @@ def update_and_plot():
         results = list(executor.map(cs.simulate, range(cs.NUM_SIMULATIONS)))
 
     cs.plot_results( cs.NUM_SIMULATIONS, cs.NUM_FLIPS, cs.START_TREASURY, cs.HOUSE_EDGE, cs.NETWORK_COST, results)
+
+    for widget in plot_frame.winfo_children():
+        widget.destroy()
+
+    canvas = FigureCanvasTkAgg(cs.fig, master=plot_frame)  # Create the canvas
+    canvas_widget = canvas.get_tk_widget()
+    canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+    canvas.draw()
 
 def update_label(slider, label_var):
     label_var.set(int(slider.get()))
@@ -70,5 +80,7 @@ network_cost_slider.grid(row=4, column=1)
 run_button = ttk.Button(frame, text="Run Simulation & Plot", command=update_and_plot)
 run_button.grid(row=5, columnspan=2, pady=20)
 
+plot_frame = ttk.Frame(root)
+plot_frame.grid(row=6, columnspan=3, padx=20, pady=20)
 root.mainloop()
 
