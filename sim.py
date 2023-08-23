@@ -1,5 +1,6 @@
 import random
 import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
 import concurrent.futures
 
 NUM_SIMULATIONS = 100
@@ -9,15 +10,15 @@ MAX_BET = 100
 BET_OPTIONS = [5, 10, 20, 50, 100]
 HOUSE_EDGE = 0.05
 NETWORK_COST = 0.5
-
 def simulate(_):
     treasury = START_TREASURY
-    wins, losses = 0, 0
+    wins, losses, volumes = 0, 0, 0
     lowest_balance = START_TREASURY
     balances = [START_TREASURY]
-    
+     
     for _ in range(NUM_FLIPS):
         bet = random.choice(BET_OPTIONS)
+        volumes += bet
         if bet > treasury:
             break
         coin_flip = random.choice([True, False]) # True is win, False is lose
@@ -32,19 +33,20 @@ def simulate(_):
         balances.append(treasury)
         lowest_balance = min(lowest_balance, treasury)
         
-    return balances, lowest_balance, wins, losses
+    return balances, lowest_balance, wins, losses, volumes
 
 with concurrent.futures.ThreadPoolExecutor() as executor:
     results = list(executor.map(simulate, range(NUM_SIMULATIONS)))
 
 # Unpack the results into their individual components
-balances, lowest_balances, wins, losses = zip(*results)
+balances, lowest_balances, wins, losses, volumes = zip(*results)
 
 # Average balances over all simulations
 average_results = [sum(x) / NUM_SIMULATIONS for x in zip(*balances)]
+average_volume = sum(volumes) / NUM_SIMULATIONS 
 
 
-fig, axs = plt.subplots(3, 1, figsize=(10,15))
+fig, axs = plt.subplots(4, 1, figsize=(10,15))
 
 # Average treasury balance over time
 axs[0].plot(average_results, color="blue", label="Average Treasury")
@@ -67,6 +69,17 @@ axs[2].set_title(f"Wins and Losses per Run\n({NUM_SIMULATIONS} Parallel Simulati
 axs[2].set_xlabel("Simulation Run")
 axs[2].set_ylabel("Count")
 axs[2].legend()
+
+
+font = FontProperties()
+font.set_family('monospace')
+font.set_size(14)
+font.set_weight('bold')
+# Volume per Run
+axs[3].axis('off') # Turn off axis
+axs[3].text(0.5, 0.5, f'Average Volume: ${average_volume:.0f}', 
+            ha='center', va='center', fontproperties=font)
+
 
 
 plt.tight_layout()
