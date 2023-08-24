@@ -8,10 +8,17 @@ import hashlib
 import os
 
 current_directory = os.getcwd()
+selected_bet_options = []
 
 def update_label(value, label_var):
     label_var.set(int(float(value)))
-    
+
+def toggle_bet_option(option, var):
+    if var.get() == 1:
+        selected_bet_options.append(option)
+    else:
+        selected_bet_options.remove(option)   
+
 def update_and_plot():
     
     cs.NUM_SIMULATIONS = int(num_sims_slider.get())
@@ -19,7 +26,8 @@ def update_and_plot():
     cs.START_TREASURY = int(start_treasury_slider.get())
     cs.HOUSE_EDGE = house_edge_slider.get()/100
     cs.NETWORK_COST = network_cost_slider.get()
-    
+    cs.BET_OPTIONS = selected_bet_options
+
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         results = list(executor.map(cs.simulate, range(cs.NUM_SIMULATIONS)))
@@ -108,8 +116,16 @@ network_cost_slider = tk.Scale(frame, from_=0.1, to_=5, orient=tk.HORIZONTAL, le
 network_cost_slider.set(cs.NETWORK_COST)
 network_cost_slider.grid(row=4, column=1)
 
+bet_option_vars = []
+for i, option in enumerate(cs.BET_OPTIONS):
+    var = tk.IntVar()
+    bet_option_vars.append(var)
+    ttk.Checkbutton(frame, text=f"${option}", variable=var, command=lambda o=option, v=var: toggle_bet_option(o, v)).grid(row=8, column=i, sticky=tk.W)
+for i in range(len(cs.BET_OPTIONS)):
+    frame.grid_columnconfigure(i, weight=1)
+    
 run_button = ttk.Button(frame, text="Run", command=update_and_plot)
-run_button.grid(row=5, columnspan=2, pady=20)
+run_button.grid(row=9, columnspan=len(cs.BET_OPTIONS), pady=20)
 
 plot_frame = ttk.Frame(root)
 plot_frame.grid(row=6, columnspan=3, padx=20, pady=20)
