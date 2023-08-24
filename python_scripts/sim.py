@@ -93,7 +93,9 @@ def plot_results(NUM_SIMULATIONS, NUM_FLIPS, START_TREASURY, HOUSE_EDGE, NETWORK
                 ha='center', va='center', fontproperties=font)
     axs[3].text(0.5, 0.4, f'Bankruptcy: {bankruptcy_count:.0f}', 
                 ha='center', va='center', fontproperties=font)
-    axs[3].text(0.5, 0.2, f'Average Profit: ${average_profit:.0f}', 
+    axs[3].text(0.5, 0.2, f'Bankruptcy Perc: {bankruptcy_count/ int(NUM_SIMULATIONS) * 100}', 
+                ha='center', va='center', fontproperties=font)
+    axs[3].text(0.5, 0.0, f'Average Profit: ${average_profit:.0f}', 
                 ha='center', va='center', fontproperties=font)
 
 
