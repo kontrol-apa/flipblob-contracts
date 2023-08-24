@@ -123,9 +123,6 @@ for i, option in enumerate(cs.BET_OPTIONS):
     ttk.Checkbutton(frame, text=f"${option}", variable=var, command=lambda o=option, v=var: toggle_bet_option(o, v)).grid(row=8, column=i, sticky=tk.W)
 for i in range(len(cs.BET_OPTIONS)):
     frame.grid_columnconfigure(i, weight=1)
-    
-run_button = ttk.Button(frame, text="Run", command=update_and_plot)
-run_button.grid(row=9, columnspan=len(cs.BET_OPTIONS), pady=20)
 
 plot_frame = ttk.Frame(root)
 plot_frame.grid(row=6, columnspan=3, padx=20, pady=20)
@@ -142,8 +139,11 @@ save_location_entry.grid(row=0, column=1, padx=5)
 save_button = ttk.Button(save_frame, text="Save Plot", command=save_plot)
 save_button.grid(row=0, column=2, padx=5)
 
+run_button = ttk.Button(root, text="Run", command=update_and_plot)
+run_button.grid(row=8, column=0, padx=10, pady=20)
+
 exit_button = ttk.Button(root, text="Exit", command=exit_program)
-exit_button.grid(row=8, columnspan=3, pady=10)
+exit_button.grid(row=9, columnspan=2, pady=10)
 
 
 root.mainloop()
