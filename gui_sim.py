@@ -14,7 +14,7 @@ def update_and_plot():
     cs.NUM_SIMULATIONS = int(num_sims_slider.get())
     cs.NUM_FLIPS = int(num_flips_slider.get())
     cs.START_TREASURY = int(start_treasury_slider.get())
-    cs.HOUSE_EDGE = house_edge_slider.get()
+    cs.HOUSE_EDGE = house_edge_slider.get()/100
     cs.NETWORK_COST = network_cost_slider.get()
     
 
@@ -44,6 +44,7 @@ frame.grid(padx=20, pady=20)
 num_sims_var = tk.StringVar()
 num_flips_var = tk.StringVar()
 start_treasury_var = tk.StringVar()
+house_edge_var = tk.StringVar()
 
 # GUI Components
 ttk.Label(frame, text="Number of Simulations:").grid(row=0, column=0, sticky=tk.W)
@@ -68,7 +69,7 @@ ttk.Label(frame, textvariable=start_treasury_var).grid(row=2, column=2)
 start_treasury_var.set(cs.START_TREASURY)
 
 ttk.Label(frame, text="House Edge:").grid(row=3, column=0)
-house_edge_slider = tk.Scale(frame, from_=0.01, to_=0.1, orient=tk.HORIZONTAL, length=300, resolution=0.01)
+house_edge_slider = tk.Scale(frame, from_=0, to_=100, orient=tk.HORIZONTAL, length=300, command=lambda e: update_label(house_edge_slider, house_edge_var))
 house_edge_slider.set(cs.HOUSE_EDGE)
 house_edge_slider.grid(row=3, column=1)
 
