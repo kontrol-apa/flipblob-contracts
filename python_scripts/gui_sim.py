@@ -8,8 +8,8 @@ import hashlib
 import os
 
 current_directory = os.getcwd()
-selected_bet_options = []
-
+selected_bet_options = cs.BET_OPTIONS.copy()
+print(selected_bet_options[0])
 def update_label(value, label_var):
     label_var.set(int(float(value)))
 
@@ -118,11 +118,12 @@ network_cost_slider.grid(row=4, column=1)
 
 bet_option_vars = []
 for i, option in enumerate(cs.BET_OPTIONS):
-    var = tk.IntVar()
+    var = tk.IntVar(value=(option in selected_bet_options))
     bet_option_vars.append(var)
     ttk.Checkbutton(frame, text=f"${option}", variable=var, command=lambda o=option, v=var: toggle_bet_option(o, v)).grid(row=8, column=i, sticky=tk.W)
 for i in range(len(cs.BET_OPTIONS)):
     frame.grid_columnconfigure(i, weight=1)
+
 
 plot_frame = ttk.Frame(root)
 plot_frame.grid(row=6, columnspan=3, padx=20, pady=20)
