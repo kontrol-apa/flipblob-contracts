@@ -1,11 +1,13 @@
 # gui_casino_simulation.py
-import locale
 import tkinter as tk
 from tkinter import ttk
 import concurrent.futures
 import sim as cs
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import hashlib
+import os
 
+current_directory = os.getcwd()
 
 def update_label(value, label_var):
     label_var.set(int(float(value)))
@@ -38,6 +40,15 @@ def update_label(slider, label_var):
 
 def save_plot():
     file_path = save_location_var.get()
+
+    parameter_hash = hashlib.md5(str(cs.NUM_SIMULATIONS + cs.NUM_FLIPS + cs.START_TREASURY + cs.HOUSE_EDGE + cs.NETWORK_COST).encode()).hexdigest()
+
+    # Construct the file name using the hash
+    file_name = f"simulation_{parameter_hash}.png"
+
+    # Construct the full path
+    file_path = os.path.join(current_directory, file_name)
+
     if not file_path:
         return  # Don't save if the file path is empty
 
@@ -97,7 +108,7 @@ network_cost_slider = tk.Scale(frame, from_=0.1, to_=5, orient=tk.HORIZONTAL, le
 network_cost_slider.set(cs.NETWORK_COST)
 network_cost_slider.grid(row=4, column=1)
 
-run_button = ttk.Button(frame, text="Run Simulation & Plot", command=update_and_plot)
+run_button = ttk.Button(frame, text="Run", command=update_and_plot)
 run_button.grid(row=5, columnspan=2, pady=20)
 
 plot_frame = ttk.Frame(root)
@@ -107,7 +118,7 @@ plot_frame.grid(row=6, columnspan=3, padx=20, pady=20)
 save_frame = ttk.Frame(root)
 save_frame.grid(row=7, columnspan=3, padx=20, pady=10)
 
-save_location_var = tk.StringVar(value="./plot")  # Default save location
+save_location_var = tk.StringVar(value=current_directory)  # Default save location
 ttk.Label(save_frame, text="Save:").grid(row=0, column=0, sticky=tk.W)
 save_location_entry = ttk.Entry(save_frame, textvariable=save_location_var)
 save_location_entry.grid(row=0, column=1, padx=5)
