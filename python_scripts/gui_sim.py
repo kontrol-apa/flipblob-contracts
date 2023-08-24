@@ -9,7 +9,7 @@ import os
 
 current_directory = os.getcwd()
 selected_bet_options = cs.BET_OPTIONS.copy()
-print(selected_bet_options[0])
+
 def update_label(value, label_var):
     label_var.set(int(float(value)))
 
