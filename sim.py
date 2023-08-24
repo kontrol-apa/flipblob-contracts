@@ -42,7 +42,6 @@ def simulate(_):
 def plot_results(NUM_SIMULATIONS, NUM_FLIPS, START_TREASURY, HOUSE_EDGE, NETWORK_COST, results):
 
     global fig  # Declare fig as global so it can be accessed from outside the function
-    fig, axs = plt.subplots(4, 1, figsize=(20,30))
     # Unpack the results into their individual components
     balances, lowest_balances, wins, losses, volumes, profits = zip(*results)
 
@@ -53,7 +52,7 @@ def plot_results(NUM_SIMULATIONS, NUM_FLIPS, START_TREASURY, HOUSE_EDGE, NETWORK
     average_profit = sum(profits) / NUM_SIMULATIONS 
 
 
-    fig, axs = plt.subplots(4, 1, figsize=(10,15))
+    fig, axs = plt.subplots(4, 1, figsize=(7.5,12.5))
 
     # Average treasury balance over time
     axs[0].plot(average_results, color="blue", label="Average Treasury")
@@ -67,7 +66,6 @@ def plot_results(NUM_SIMULATIONS, NUM_FLIPS, START_TREASURY, HOUSE_EDGE, NETWORK
     axs[1].set_title(f"Lowest Treasury per Run\n({NUM_SIMULATIONS} Parallel Simulations, {NUM_FLIPS} Plays Each)")
     axs[1].set_xlabel("Simulation Run")
     axs[1].set_ylabel("Lowest Balance")
-    axs[1].legend()
 
     # Wins and Losses per Run
     axs[2].bar(range(NUM_SIMULATIONS), wins, color="green", label="Wins")
