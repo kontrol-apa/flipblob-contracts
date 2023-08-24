@@ -2,6 +2,8 @@ import random
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
 
+# fig = plt.figure()
+
 NUM_SIMULATIONS = 100
 NUM_FLIPS = 10000
 START_TREASURY = 5000
@@ -52,7 +54,7 @@ def plot_results(NUM_SIMULATIONS, NUM_FLIPS, START_TREASURY, HOUSE_EDGE, NETWORK
     average_profit = sum(profits) / NUM_SIMULATIONS 
 
 
-    fig, axs = plt.subplots(4, 1, figsize=(7.5,12.5))
+    fig, axs = plt.subplots(4, 1, figsize=(5,10))
 
     # Average treasury balance over time
     axs[0].plot(average_results, color="blue", label="Average Treasury")
@@ -89,9 +91,9 @@ def plot_results(NUM_SIMULATIONS, NUM_FLIPS, START_TREASURY, HOUSE_EDGE, NETWORK
     font.set_size(14)
     axs[3].text(0.5, 0.6, f'Average Volume: ${average_volume:.0f}', 
                 ha='center', va='center', fontproperties=font)
-    axs[3].text(0.5, 0.5, f'Bankruptcy: {bankruptcy_count:.0f}', 
+    axs[3].text(0.5, 0.4, f'Bankruptcy: {bankruptcy_count:.0f}', 
                 ha='center', va='center', fontproperties=font)
-    axs[3].text(0.5, 0.4, f'Average Profit: ${average_profit:.0f}', 
+    axs[3].text(0.5, 0.2, f'Average Profit: ${average_profit:.0f}', 
                 ha='center', va='center', fontproperties=font)
 
 

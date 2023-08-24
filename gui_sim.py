@@ -1,10 +1,11 @@
 # gui_casino_simulation.py
-
+import locale
 import tkinter as tk
 from tkinter import ttk
 import concurrent.futures
 import sim as cs
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 
 def update_label(value, label_var):
     label_var.set(int(float(value)))
@@ -33,6 +34,24 @@ def update_and_plot():
 
 def update_label(slider, label_var):
     label_var.set(int(slider.get()))
+
+
+def save_plot():
+    file_path = save_location_var.get()
+    if not file_path:
+        return  # Don't save if the file path is empty
+
+    if not file_path.endswith('.png'):
+        file_path += '.png'  # Append .png extension if not provided
+
+    canvas = cs.fig.canvas
+    canvas.print_png(file_path)
+    print(f"Plot saved as {file_path}")
+
+def exit_program():
+    print("Exiting.")
+    root.destroy()
+    exit()
 
 root = tk.Tk()
 root.title("Casino Simulator")
@@ -83,5 +102,22 @@ run_button.grid(row=5, columnspan=2, pady=20)
 
 plot_frame = ttk.Frame(root)
 plot_frame.grid(row=6, columnspan=3, padx=20, pady=20)
+
+
+save_frame = ttk.Frame(root)
+save_frame.grid(row=7, columnspan=3, padx=20, pady=10)
+
+save_location_var = tk.StringVar(value="./plot")  # Default save location
+ttk.Label(save_frame, text="Save:").grid(row=0, column=0, sticky=tk.W)
+save_location_entry = ttk.Entry(save_frame, textvariable=save_location_var)
+save_location_entry.grid(row=0, column=1, padx=5)
+
+save_button = ttk.Button(save_frame, text="Save Plot", command=save_plot)
+save_button.grid(row=0, column=2, padx=5)
+
+exit_button = ttk.Button(root, text="Exit", command=exit_program)
+exit_button.grid(row=8, columnspan=3, pady=10)
+
+
 root.mainloop()
 
