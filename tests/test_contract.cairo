@@ -123,10 +123,11 @@ mod tests {
         ref flip_safe_dispatcher: IFlipSafeDispatcher,
         flip_contract_address: @ContractAddress,
         erc20_contract_address: @ContractAddress,
+        max_bet_amount: u256,
         token_name: felt252
     ) {
         start_prank(*flip_contract_address, common::admin()); // MOCK ADMIN TO ADD COIN SUPPORT
-        flip_safe_dispatcher.set_token_support(token_name, *erc20_contract_address);
+        flip_safe_dispatcher.set_token_support(token_name, *erc20_contract_address, max_bet_amount);
         stop_prank(*flip_contract_address);
 
         let is_supported: bool = flip_safe_dispatcher.is_token_supported(token_name).unwrap();
@@ -136,7 +137,6 @@ mod tests {
             .get_token_address(token_name)
             .unwrap();
         assert(querried_erc20_contract_address == *erc20_contract_address, 'Addresses Must Match!');
-
         let is_supported: bool = flip_safe_dispatcher.is_token_supported('MATIC').unwrap();
         assert(is_supported == false, 'MATIC is Not Supported!');
     }
@@ -202,8 +202,13 @@ mod tests {
             contract_address: meth_contract_address
         };
 
+        let max_bet_amount_meth: u256 = 100000000000000000;
         set_token_support(
-            ref flip_safe_dispatcher, @flip_contract_address, @meth_contract_address, 'METH'
+            ref flip_safe_dispatcher,
+            @flip_contract_address,
+            @meth_contract_address,
+            max_bet_amount_meth,
+            'METH'
         );
 
         let mut request_ids: Array<felt252> = ArrayTrait::new();
@@ -235,7 +240,7 @@ mod tests {
         stop_prank(flip_contract_address);
 
         let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
-        assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
+        assert((pre_bet_balance - pre_balance) == (bet), '1Balances dont match!');
 
         match flip_safe_dispatcher
             .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
@@ -255,7 +260,7 @@ mod tests {
         assert(
             (post_balance
                 - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
-            'Balances dont match!'
+            '2Balances dont match!'
         );
 
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
@@ -282,12 +287,22 @@ mod tests {
         let mut usdc_safe_dispatcher = IERC20SafeDispatcher {
             contract_address: usdc_contract_address
         };
+        let max_bet_amount_meth = 100000000000000000;
+        let max_bet_amount_usdc = 100000000000000000000;
 
         set_token_support(
-            ref flip_safe_dispatcher, @flip_contract_address, @meth_contract_address, 'METH'
+            ref flip_safe_dispatcher,
+            @flip_contract_address,
+            @meth_contract_address,
+            max_bet_amount_meth,
+            'METH'
         );
         set_token_support(
-            ref flip_safe_dispatcher, @flip_contract_address, @usdc_contract_address, 'USDC'
+            ref flip_safe_dispatcher,
+            @flip_contract_address,
+            @usdc_contract_address,
+            max_bet_amount_usdc,
+            'USDC'
         );
 
         let mut request_ids: Array<felt252> = ArrayTrait::new();
@@ -435,12 +450,21 @@ mod tests {
         let mut usdc_safe_dispatcher = IERC20SafeDispatcher {
             contract_address: usdc_contract_address
         };
-
+        let max_bet_amount_meth = 100000000000000000;
+        let max_bet_amount_usdc = 100000000000000000000;
         set_token_support(
-            ref flip_safe_dispatcher, @flip_contract_address, @meth_contract_address, 'METH'
+            ref flip_safe_dispatcher,
+            @flip_contract_address,
+            @meth_contract_address,
+            max_bet_amount_meth,
+            'METH'
         );
         set_token_support(
-            ref flip_safe_dispatcher, @flip_contract_address, @usdc_contract_address, 'USDC'
+            ref flip_safe_dispatcher,
+            @flip_contract_address,
+            @usdc_contract_address,
+            max_bet_amount_usdc,
+            'USDC'
         );
 
         let mut request_ids: Array<felt252> = ArrayTrait::new();
@@ -461,13 +485,13 @@ mod tests {
             ref meth_safe_dispatcher,
             @flip_contract_address,
             @meth_contract_address,
-            100000000000000000000
+            10000000000000000000000
         );
         approve_and_mint(
             ref usdc_safe_dispatcher,
             @flip_contract_address,
             @usdc_contract_address,
-            10000000000000000000
+            1000000000000000000000
         );
 
         let mut index = 0;
@@ -528,7 +552,7 @@ mod tests {
                 - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
             'Balances dont match!'
         );
-        
+
         times = 11;
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
         match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'METH') {
@@ -539,7 +563,5 @@ mod tests {
             }
         }
         stop_prank(flip_contract_address);
-
-        
     }
 }

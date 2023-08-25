@@ -27,16 +27,24 @@ trait IFlip<TContractState> {
     fn owner(self: @TContractState) -> ContractAddress;
     fn set_flip_fee(ref self: TContractState, newFee: u256);
     fn get_flip_fee(self: @TContractState) -> u256;
-    fn set_token_support(ref self: TContractState, tokenName: felt252, tokenAddr: ContractAddress);
+    fn set_token_support(
+        ref self: TContractState,
+        tokenName: felt252,
+        tokenAddress: ContractAddress,
+        maxBetable: u256
+    );
     fn is_token_supported(self: @TContractState, tokenName: felt252) -> bool;
     fn get_token_address(self: @TContractState, tokenName: felt252) -> ContractAddress;
     fn update_treasury(ref self: TContractState, treasuryAddress: felt252);
     fn get_request_final_state(self: @TContractState, request_id: felt252) -> (felt252, u256);
+
+    fn set_max_bet(ref self: TContractState, tokenName: felt252, maxBetable: u256);
 }
 
 #[starknet::interface]
 trait ERC20<TContractState> {
     fn transferFrom(ref self: TContractState, sender: felt252, recipient: felt252, amount: u256);
+    fn balance_of(self: @TContractState, account: felt252) -> u256;
 }
 
 #[starknet::contract]
@@ -61,7 +69,7 @@ mod Flip {
         requestStatus: LegacyMap<felt252, felt252>,
         request_success_count: LegacyMap<felt252, u256>,
         fair_random_numbers: LegacyMap<felt252, u256>,
-        supported_erc20: LegacyMap<felt252, ContractAddress>,
+        supported_erc20: LegacyMap<felt252, tokenMetadata>,
         treasury_address: felt252,
         flip_fee: u256,
     }
@@ -73,6 +81,12 @@ mod Flip {
         wager_amount: u256,
         chosen_coin_face: u256,
         token: felt252
+    }
+
+    #[derive(Copy, Drop, Serde, starknet::Store)]
+    struct tokenMetadata {
+        tokenAddress: ContractAddress,
+        maxBetable: u256
     }
 
     #[event]
@@ -120,12 +134,12 @@ mod Flip {
 
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
-        fn get_token_support(self: @ContractState, tokenName: felt252) -> Option<ContractAddress> {
-            let tokenAddress = self.supported_erc20.read(tokenName);
-            if tokenAddress.is_zero() {
+        fn get_token_support(self: @ContractState, tokenName: felt252) -> Option<tokenMetadata> {
+            let tokenMetadata = self.supported_erc20.read(tokenName);
+            if tokenMetadata.tokenAddress.is_zero() {
                 return Option::None(());
             } else {
-                return Option::Some(tokenAddress);
+                return Option::Some(tokenMetadata);
             }
         }
     }
@@ -204,11 +218,18 @@ mod Flip {
             let issuer = starknet::contract_address_to_felt252(caller);
             assert(((toss_result == 0) || (toss_result == 1)), 'Unsupported Coin Face.');
             assert((times > 0) && (times <= 10), 'Invalid amount.');
-
             match self.get_token_support(erc20_name) {
-                Option::Some(_token_address) => {
+                Option::Some(token_metadata) => {
+                    assert(token_metadata.maxBetable > wager_amount, 'Wager too high');
+
+                    let treasuryBalance = ERC20Dispatcher {
+                        contract_address: token_metadata.tokenAddress
+                    }.balance_of(self.treasury_address.read());
+
+                    assert(treasuryBalance >= wager_amount * times, 'Treasury cant accept the bet');
+
                     ERC20Dispatcher {
-                        contract_address: _token_address
+                        contract_address: token_metadata.tokenAddress
                     }.transferFrom(issuer, self.treasury_address.read(), wager_amount * times);
                     let current_request_id: felt252 = self.next_request_id.read();
                     self.next_request_id.write(current_request_id + 1); // increment
@@ -286,9 +307,9 @@ mod Flip {
             if (success) {
                 profit = (wager_amount * (100 - self.flip_fee.read()) / 100) * success_count;
                 match self.get_token_support(erc20_name) {
-                    Option::Some(_token_address) => {
+                    Option::Some(token_metadata) => {
                         ERC20Dispatcher {
-                            contract_address: _token_address
+                            contract_address: token_metadata.tokenAddress
                         }
                             .transferFrom(
                                 self.treasury_address.read(),
@@ -321,16 +342,27 @@ mod Flip {
         }
 
         fn set_token_support(
-            ref self: ContractState, tokenName: felt252, tokenAddr: ContractAddress
+            ref self: ContractState,
+            tokenName: felt252,
+            tokenAddress: ContractAddress,
+            maxBetable: u256
         ) {
             let ownable = Ownable::unsafe_new_contract_state();
             InternalImpl::assert_only_owner(@ownable);
-            self.supported_erc20.write(tokenName, tokenAddr);
+            self.supported_erc20.write(tokenName, tokenMetadata { tokenAddress, maxBetable });
+        }
+
+        fn set_max_bet(ref self: ContractState, tokenName: felt252, maxBetable: u256) {
+            let ownable = Ownable::unsafe_new_contract_state();
+            InternalImpl::assert_only_owner(@ownable);
+            let mut tokenMetadata = self.supported_erc20.read(tokenName);
+            tokenMetadata.maxBetable = maxBetable;
+            self.supported_erc20.write(tokenName, tokenMetadata);
         }
 
         fn is_token_supported(self: @ContractState, tokenName: felt252) -> bool {
-            let tokenAddress = self.supported_erc20.read(tokenName);
-            if tokenAddress.is_zero() {
+            let tokenMetadata = self.supported_erc20.read(tokenName);
+            if tokenMetadata.tokenAddress.is_zero() {
                 return false;
             } else {
                 return true;
@@ -338,7 +370,7 @@ mod Flip {
         }
 
         fn get_token_address(self: @ContractState, tokenName: felt252) -> ContractAddress {
-            self.supported_erc20.read(tokenName)
+            self.supported_erc20.read(tokenName).tokenAddress
         }
 
 
