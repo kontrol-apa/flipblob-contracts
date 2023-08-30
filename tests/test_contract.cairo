@@ -20,6 +20,7 @@ mod tests {
     use FlipBlob::common;
     use snforge_std::{ declare, ContractClassTrait, start_prank, stop_prank, PrintTrait };
 
+    const MAX_BET_AMOUNT: u256 = 10;
 
     fn deploy_contract(name: felt252, arguments: Array<felt252>) -> ContractAddress {
         let contract = declare(name);
@@ -175,7 +176,7 @@ mod tests {
     fn calculate_payout(
         ref flip_safe_dispatcher: IFlipSafeDispatcher, wager: u256, success_count: u256
     ) -> u256 {
-        if success_count > 0 {
+        if success_count > 0 && success_count <= MAX_BET_AMOUNT {
             ((wager * (100 - flip_safe_dispatcher.get_flip_fee().unwrap()) / 100) * success_count)
                 + (wager * success_count) // (PROFIT) + (INITIAL_DEPOSIT) 
         } else {
