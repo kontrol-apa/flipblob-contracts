@@ -6,7 +6,7 @@ const INVALID: u256 = 2;
 mod tests {
     use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
     use result::ResultTrait;
-    use option::OptionTrait;
+    use option::{Option,OptionTrait};
     use traits::TryInto;
     use traits::Into;
     use starknet::ContractAddress;
@@ -140,20 +140,12 @@ mod tests {
         let is_supported: bool = flip_safe_dispatcher.is_token_supported('MATIC').unwrap();
         assert(is_supported == false, 'MATIC is Not Supported!');
     }
-
-    fn prepare_rng(
-        ref flip_safe_dispatcher: IFlipSafeDispatcher,
-        ref request_ids: Array<felt252>,
-        ref fair_random_number_hashes: Array<u256>,
-        ref random_numbers: Array<u256>
-    ) {
+    fn prepare_rng(ref request_ids: Array<felt252>, ref random_numbers: Array<u256>) {
         let mut index = 1;
         let SIZE = 20;
         loop {
-            let random_number = flip_safe_dispatcher.calculate_keccak(index.into()).unwrap();
-            let hash = flip_safe_dispatcher.calculate_keccak(random_number).unwrap();
+            let random_number = keccak::keccak_u256s_le_inputs(array![index.into()].span());
             random_numbers.append(random_number);
-            fair_random_number_hashes.append(hash);
             request_ids.append(index.into());
 
             if index == SIZE {
@@ -212,17 +204,10 @@ mod tests {
         );
 
         let mut request_ids: Array<felt252> = ArrayTrait::new();
-        let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
         let mut random_numbers = ArrayTrait::<u256>::new();
-        prepare_rng(
-            ref flip_safe_dispatcher,
-            ref request_ids,
-            ref fair_random_number_hashes,
-            ref random_numbers
-        );
+        prepare_rng(ref request_ids, ref random_numbers);
 
         start_prank(flip_contract_address, common::admin()); // MOCK ADMIN TO WRITE FAIR RNG
-        flip_safe_dispatcher.write_fair_rng_batch(request_ids.span(), fair_random_number_hashes);
         stop_prank(flip_contract_address);
 
         approve_and_mint(
@@ -252,10 +237,10 @@ mod tests {
         }
 
         let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
-        let (state, success_count) = flip_safe_dispatcher
-            .get_request_final_state(*request_ids.at(index))
+        let success_count = flip_safe_dispatcher
+            .get_request_status(*request_ids.at(index))
             .unwrap();
-        assert(state == 1, 'Transaction must be finalized!');
+        assert(success_count != 0, 'Transaction must be finalized!');
 
         assert(
             (post_balance
@@ -308,15 +293,9 @@ mod tests {
         let mut request_ids: Array<felt252> = ArrayTrait::new();
         let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
         let mut random_numbers = ArrayTrait::<u256>::new();
-        prepare_rng(
-            ref flip_safe_dispatcher,
-            ref request_ids,
-            ref fair_random_number_hashes,
-            ref random_numbers
-        );
+        prepare_rng(ref request_ids, ref random_numbers);
 
         start_prank(flip_contract_address, common::admin()); // MOCK ADMIN TO WRITE FAIR RNG
-        flip_safe_dispatcher.write_fair_rng_batch(request_ids.span(), fair_random_number_hashes);
         stop_prank(flip_contract_address);
 
         approve_and_mint(
@@ -349,10 +328,10 @@ mod tests {
                 (*panic_data.at(0)).print();
             }
         }
-        let (state, success_count) = flip_safe_dispatcher
-            .get_request_final_state(*request_ids.at(index))
+        let success_count = flip_safe_dispatcher
+            .get_request_status(*request_ids.at(index))
             .unwrap();
-        assert(state == 1, 'Transaction must be finalized!');
+        assert(success_count != 0, 'Transaction must be finalized!');
 
         let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
         assert(
@@ -378,10 +357,10 @@ mod tests {
                 (*panic_data.at(0)).print();
             }
         }
-        let (state, success_count) = flip_safe_dispatcher
-            .get_request_final_state(*request_ids.at(index))
+        let success_count = flip_safe_dispatcher
+            .get_request_status(*request_ids.at(index))
             .unwrap();
-        assert(state == 1, 'Transaction must be finalized!');
+        assert(success_count != 0, 'Transaction must be finalized!');
 
         let post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
         assert(
@@ -471,14 +450,11 @@ mod tests {
         let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
         let mut random_numbers = ArrayTrait::<u256>::new();
         prepare_rng(
-            ref flip_safe_dispatcher,
             ref request_ids,
-            ref fair_random_number_hashes,
             ref random_numbers
         );
 
         start_prank(flip_contract_address, common::admin()); // MOCK ADMIN TO WRITE FAIR RNG
-        flip_safe_dispatcher.write_fair_rng_batch(request_ids.span(), fair_random_number_hashes);
         stop_prank(flip_contract_address);
 
         approve_and_mint(
@@ -512,10 +488,10 @@ mod tests {
                 (*panic_data.at(0)).print();
             }
         }
-        let (state, success_count) = flip_safe_dispatcher
-            .get_request_final_state(*request_ids.at(index))
+        let success_count = flip_safe_dispatcher
+            .get_request_status(*request_ids.at(index))
             .unwrap();
-        assert(state == 1, 'Transaction must be finalized!');
+        assert(success_count != 0, 'Transaction must be finalized!');
         assert(success_count <= times, 'Count greater than the amount');
         let mut post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
         assert(
@@ -541,10 +517,10 @@ mod tests {
                 (*panic_data.at(0)).print();
             }
         }
-        let (state, success_count) = flip_safe_dispatcher
-            .get_request_final_state(*request_ids.at(index))
+        let success_count = flip_safe_dispatcher
+            .get_request_status(*request_ids.at(index))
             .unwrap();
-        assert(state == 1, 'Transaction must be finalized!');
+        assert(success_count != 0, 'Transaction must be finalized!');
         assert(success_count <= times, 'Count greater than the amount');
         post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
         assert(
