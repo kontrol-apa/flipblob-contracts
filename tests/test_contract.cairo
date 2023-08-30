@@ -11,7 +11,6 @@ mod tests {
     use traits::Into;
     use starknet::ContractAddress;
     use starknet::Felt252TryIntoContractAddress;
-    use cheatcodes::PreparedContract;
     use debug::PrintTrait;
     use clone::Clone;
     use FlipBlob::flip::IFlipSafeDispatcher;
@@ -20,24 +19,24 @@ mod tests {
     use FlipBlob::merc20::IERC20SafeDispatcher;
     use starknet::get_caller_address;
     use FlipBlob::common;
+    use snforge_std::{ declare, ContractClassTrait, start_prank, stop_prank };
+
 
     fn deploy_contract(name: felt252, arguments: Array<felt252>) -> ContractAddress {
-        let class_hash = declare(name);
-        let prepared = PreparedContract { class_hash, constructor_calldata: @arguments };
-        deploy(prepared).unwrap()
+        let contract = declare(name);
+        contract.deploy(@arguments).unwrap()
     }
 
     fn deploy_multiple_contracts(
         name: felt252, mut arguments: Array<Array<felt252>>
     ) -> Array<ContractAddress> {
-        let class_hash = declare(name);
+        let contract = declare(name);
         let mut erc20_addresses: Array<ContractAddress> = ArrayTrait::new();
 
         loop {
             match arguments.pop_front() {
                 Option::Some(calldata) => {
-                    let prepared = PreparedContract { class_hash, constructor_calldata: @calldata };
-                    erc20_addresses.append(deploy(prepared).unwrap());
+                    erc20_addresses.append(contract.deploy(@calldata).unwrap());
                 },
                 Option::None(_) => {
                     break erc20_addresses.clone();
