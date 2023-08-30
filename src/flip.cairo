@@ -17,7 +17,6 @@ trait IFlip<TContractState> {
     );
     fn finalize_request(ref self: TContractState, requestId: felt252, rng: u256);
     fn get_request_status(self: @TContractState, request_id: felt252) -> u256;
-    fn calculate_keccak(self: @TContractState, num: u256) -> u256;
     fn owner(self: @TContractState) -> ContractAddress;
     fn set_flip_fee(ref self: TContractState, newFee: u256);
     fn get_flip_fee(self: @TContractState) -> u256;
@@ -149,11 +148,6 @@ mod Flip {
         }
         fn get_request(self: @ContractState, request_id: felt252) -> requestMetadata {
             self.requests.read(request_id)
-        }
-
-        // for testing purposes
-        fn calculate_keccak(self: @ContractState, num: u256) -> u256 {
-            keccak::keccak_u256s_le_inputs(array![num].span())
         }
 
         fn transfer_ownership(ref self: ContractState, new_owner: ContractAddress) {
