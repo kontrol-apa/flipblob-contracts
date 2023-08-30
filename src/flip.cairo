@@ -30,6 +30,8 @@ trait IFlip<TContractState> {
     fn get_token_address(self: @TContractState, tokenName: felt252) -> ContractAddress;
     fn update_treasury(ref self: TContractState, treasuryAddress: felt252);
     fn set_max_bet(ref self: TContractState, tokenName: felt252, maxBetable: u256);
+    fn set_finalizer(ref self: TContractState, finalizer: ContractAddress);
+    fn get_finalizer(self: @TContractState) -> ContractAddress;
 }
 
 #[starknet::interface]
@@ -62,6 +64,7 @@ mod Flip {
         supported_erc20: LegacyMap<felt252, tokenMetadata>,
         treasury_address: felt252,
         flip_fee: u256,
+        finalizer:ContractAddress
     }
 
     #[derive(Copy, Drop, Serde, starknet::Store)]
@@ -105,7 +108,7 @@ mod Flip {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState, treasuryAddress: felt252, owner_address: felt252, flipFee: u256
+        ref self: ContractState, treasuryAddress: felt252, owner_address: felt252, flipFee: u256, finalizer:ContractAddress
     ) {
         // owner address
         let owner: ContractAddress = starknet::contract_address_try_from_felt252(owner_address)
@@ -119,6 +122,7 @@ mod Flip {
             ); // if request ids start from 0, it makes it super hard on the backend to track some stuff
         self.flip_fee.write(flipFee);
         self.treasury_address.write(treasuryAddress);
+        self.finalizer.write(finalizer);
     }
 
     #[generate_trait]
@@ -130,6 +134,11 @@ mod Flip {
             } else {
                 return Option::Some(tokenMetadata);
             }
+        }
+
+        #[inline(always)]
+        fn is_finalizer(self: @ContractState) -> bool {
+            self.finalizer.read() == get_caller_address()
         }
     }
 
@@ -221,6 +230,7 @@ mod Flip {
             let user_address_felt252: felt252 = starknet::contract_address_to_felt252(user_address);
             let request_status = self.requestStatus.read(requestId);
 
+            assert(self.is_finalizer() == true, 'Only Finalizer');
             assert(request_status == 0, 'Request already finalized.');
 
             let mut profit = 0;
@@ -311,6 +321,16 @@ mod Flip {
             InternalImpl::assert_only_owner(@ownable);
             assert(treasuryAddress.is_non_zero(), 'Cant use 0 address');
             self.treasury_address.write(treasuryAddress);
+        }
+
+        fn set_finalizer(ref self: ContractState, finalizer: ContractAddress) {
+            let ownable = Ownable::unsafe_new_contract_state();
+            InternalImpl::assert_only_owner(@ownable);
+            self.finalizer.write(finalizer);
+        }
+
+        fn get_finalizer(self: @ContractState) ->  ContractAddress {
+            self.finalizer.read()
         }
 
     }
