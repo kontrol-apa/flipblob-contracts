@@ -88,6 +88,7 @@ mod tests {
         calldata.append(starknet::contract_address_to_felt252(common::admin()));
         calldata.append(flipFeeLow);
         calldata.append(flipFeeHigh);
+        calldata.append(starknet::contract_address_to_felt252(common::finalizer()));
 
         let flip_contract_address = deploy_contract('Flip', calldata);
         let mut calldatas: Array<Array<felt252>> = ArrayTrait::new();
@@ -263,6 +264,7 @@ mod tests {
 
     #[test]
     fn test_double_erc20() {
+
         let (flip_contract_address, meth_contract_address, usdc_contract_address) =
             deploy_flip_and_mocketh_usdc();
         let mut flip_safe_dispatcher = IFlipSafeDispatcher {
