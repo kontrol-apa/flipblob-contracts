@@ -11,7 +11,6 @@ mod tests {
     use traits::Into;
     use starknet::ContractAddress;
     use starknet::Felt252TryIntoContractAddress;
-    use debug::PrintTrait;
     use clone::Clone;
     use FlipBlob::flip::IFlipSafeDispatcher;
     use FlipBlob::flip::IFlipSafeDispatcherTrait;
@@ -19,7 +18,7 @@ mod tests {
     use FlipBlob::merc20::IERC20SafeDispatcher;
     use starknet::get_caller_address;
     use FlipBlob::common;
-    use snforge_std::{ declare, ContractClassTrait, start_prank, stop_prank };
+    use snforge_std::{ declare, ContractClassTrait, start_prank, stop_prank, PrintTrait };
 
 
     fn deploy_contract(name: felt252, arguments: Array<felt252>) -> ContractAddress {
