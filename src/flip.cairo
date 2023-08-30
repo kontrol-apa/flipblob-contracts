@@ -100,7 +100,6 @@ mod Flip {
     #[derive(Drop, starknet::Event)]
     struct RequestFinalized {
         request_id: felt252,
-        success: bool,
         profit: u256
     }
 
@@ -231,14 +230,12 @@ mod Flip {
             assert(request_status == 0, 'Request already finalized.');
 
             let mut profit = 0;
-            let mut success = false;
             let mut success_count = 0;
             let mut index = 1;
             let mut seed = rng;
             loop {
                 let toss_result: u256 = seed % 2;
                 if toss_result == toss_result_prediction {
-                    success = true;
                     success_count += 1;
                 }
 
@@ -248,7 +245,7 @@ mod Flip {
                 index += 1;
                 seed = keccak::keccak_u256s_le_inputs(array![seed].span()); // returns a u256;
             };
-            if (success) {
+            if (success_count > 0) {
                 self.requestStatus.write(requestId, success_count); // 0 respresents unfinalized wager, anything above 0 and below 11 is a finalized wager
                 profit = (wager_amount * (100 - self.flip_fee.read()) / 100) * success_count;
                 match self.get_token_support(erc20_name) {
@@ -268,7 +265,7 @@ mod Flip {
             else {
                 self.requestStatus.write(requestId, MAX_BET_AMOUNT + 1); // In case of fail write 11, which represents invalid amount
             }
-            self.emit(RequestFinalized { request_id: requestId, success: success, profit: profit });
+            self.emit(RequestFinalized { request_id: requestId, profit: profit });
         }
 
         fn set_flip_fee(ref self: ContractState, newFee: u256) {
