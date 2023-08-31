@@ -189,11 +189,12 @@ mod tests {
     fn finalize_request(
         ref flip_safe_dispatcher: IFlipSafeDispatcher,
         flip_contract_address: @ContractAddress,
+        finalizer:ContractAddress,
         requestId: felt252,
         randomNumber: u256,
         error_message: felt252
     ) {
-        start_prank(*flip_contract_address, common::finalizer()); // MOCK AFINALIZER TO FINALIZE BET
+        start_prank(*flip_contract_address, finalizer); // MOCK AFINALIZER TO FINALIZE BET
         match flip_safe_dispatcher.finalize_request(requestId, randomNumber) {
             Result::Ok(_) => {
                 if error_message == 0 {
@@ -257,6 +258,16 @@ mod tests {
         finalize_request(
             ref flip_safe_dispatcher,
             @flip_contract_address,
+            common::treasury(),
+            *request_ids.at(index),
+            *random_numbers.at(index),
+            'Only Finalizer'
+        );
+
+        finalize_request(
+            ref flip_safe_dispatcher,
+            @flip_contract_address,
+            common::finalizer(),
             *request_ids.at(index),
             *random_numbers.at(index),
             0
@@ -348,6 +359,7 @@ mod tests {
         finalize_request(
             ref flip_safe_dispatcher,
             @flip_contract_address,
+            common::finalizer(),
             *request_ids.at(index),
             *random_numbers.at(index),
             0
@@ -379,6 +391,7 @@ mod tests {
         finalize_request(
             ref flip_safe_dispatcher,
             @flip_contract_address,
+            common::finalizer(),
             *request_ids.at(index),
             *random_numbers.at(index),
             0
@@ -419,6 +432,7 @@ mod tests {
         finalize_request(
             ref flip_safe_dispatcher,
             @flip_contract_address,
+            common::finalizer(),
             *request_ids.at(index),
             *random_numbers.at(index),
             'Request already finalized.'
@@ -428,6 +442,7 @@ mod tests {
         finalize_request(
             ref flip_safe_dispatcher,
             @flip_contract_address,
+            common::finalizer(),
             *request_ids.at(index),
             *random_numbers.at(index),
             0
@@ -495,6 +510,7 @@ mod tests {
         finalize_request(
             ref flip_safe_dispatcher,
             @flip_contract_address,
+            common::finalizer(),
             *request_ids.at(index),
             *random_numbers.at(index),
             0
@@ -527,6 +543,7 @@ mod tests {
         finalize_request(
             ref flip_safe_dispatcher,
             @flip_contract_address,
+            common::finalizer(),
             *request_ids.at(index),
             *random_numbers.at(index),
             0
