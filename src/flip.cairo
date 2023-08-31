@@ -56,11 +56,9 @@ mod Flip {
 
     #[storage]
     struct Storage {
-        balance: felt252,
         next_request_id: felt252,
         requests: LegacyMap<felt252, requestMetadata>,
         requestStatus: LegacyMap<felt252, u256>,
-        fair_random_numbers: LegacyMap<felt252, u256>,
         supported_erc20: LegacyMap<felt252, tokenMetadata>,
         treasury_address: felt252,
         flip_fee: u256,
