@@ -235,9 +235,6 @@ mod tests {
         let mut random_numbers = ArrayTrait::<u256>::new();
         prepare_rng(ref request_ids, ref random_numbers);
 
-        start_prank(flip_contract_address, common::admin()); // MOCK ADMIN TO WRITE FAIR RNG
-        stop_prank(flip_contract_address);
-
         approve_and_mint(
             ref meth_safe_dispatcher,
             @flip_contract_address,
@@ -316,9 +313,6 @@ mod tests {
         let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
         let mut random_numbers = ArrayTrait::<u256>::new();
         prepare_rng(ref request_ids, ref random_numbers);
-
-        start_prank(flip_contract_address, common::admin()); // MOCK ADMIN TO WRITE FAIR RNG
-        stop_prank(flip_contract_address);
 
         approve_and_mint(
             ref meth_safe_dispatcher,
@@ -448,9 +442,6 @@ mod tests {
             ref request_ids,
             ref random_numbers
         );
-
-        start_prank(flip_contract_address, common::admin()); // MOCK ADMIN TO WRITE FAIR RNG
-        stop_prank(flip_contract_address);
 
         approve_and_mint(
             ref meth_safe_dispatcher,
