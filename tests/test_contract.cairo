@@ -681,6 +681,128 @@ mod tests {
             .unwrap()
             .into();
         assert(success_count != 0, 'TX must be finalized!');
+
+        let mut times = 11;
+        start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
+        match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'METH') {
+            Result::Ok(_) => panic_with_felt252('Should\'ve Panicked'),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+                assert(*panic_data.at(0) == 'Invalid amount.', *panic_data.at(0));
+            }
+        }
+        stop_prank(flip_contract_address);
+    }
+
+        #[test]
+    fn test_max_wager() {
+        let (flip_contract_address, meth_contract_address, usdc_contract_address) =
+            deploy_flip_and_mocketh_usdc();
+        let mut flip_safe_dispatcher = IFlipSafeDispatcher {
+            contract_address: flip_contract_address
+        };
+        let mut meth_safe_dispatcher = IERC20SafeDispatcher {
+            contract_address: meth_contract_address
+        };
+        let mut usdc_safe_dispatcher = IERC20SafeDispatcher {
+            contract_address: usdc_contract_address
+        };
+        let max_bet_amount_meth = 100000000000000000;
+        let max_bet_amount_usdc = 10000000000000000000;
+        set_token_support(
+            ref flip_safe_dispatcher,
+            @flip_contract_address,
+            @meth_contract_address,
+            max_bet_amount_meth,
+            'METH'
+        );
+        set_token_support(
+            ref flip_safe_dispatcher,
+            @flip_contract_address,
+            @usdc_contract_address,
+            max_bet_amount_usdc,
+            'USDC'
+        );
+
+        let mut request_ids: Array<felt252> = ArrayTrait::new();
+        let mut fair_random_number_hashes: Array<u256> = ArrayTrait::new();
+        let mut random_numbers = ArrayTrait::<u256>::new();
+        prepare_rng(ref request_ids, ref random_numbers);
+
+        approve_and_mint(
+            ref meth_safe_dispatcher,
+            @flip_contract_address,
+            @meth_contract_address,
+            10000000000000000000000000000
+        );
+        approve_and_mint(
+            ref usdc_safe_dispatcher,
+            @flip_contract_address,
+            @usdc_contract_address,
+            1000000000000000000000000000
+        );
+        let mut index = 0;
+        let mut bet = max_bet_amount_meth;
+        let mut times = 1;
+        start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
+        match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'METH') {
+            Result::Ok(_) => panic_with_felt252('Should\'ve Panicked'),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+                assert(*panic_data.at(0) == 'Wager too high', *panic_data.at(0));
+            }
+        }
+        let success_count = flip_safe_dispatcher
+            .get_request_status(*request_ids.at(index))
+            .unwrap()
+            .into();
+        assert(success_count == 0, 'TX musn`t not be finalized!');
+        assert(flip_safe_dispatcher.get_next_request_id().unwrap() == 1, 'No TX has been made');
+
+
+        let mut bet = max_bet_amount_usdc;
+        let mut times = 10;
+         match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'USDC') {
+            Result::Ok(_) => panic_with_felt252('Should\'ve Panicked'),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+                assert(*panic_data.at(0) == 'Wager too high', *panic_data.at(0));
+            }
+        }
+        let success_count = flip_safe_dispatcher
+            .get_request_status(*request_ids.at(index))
+            .unwrap()
+            .into();
+        assert(success_count == 0, 'TX musn`t be finalized!');
+        assert(flip_safe_dispatcher.get_next_request_id().unwrap() == 1, 'No TX has been made');
+
+        
+        let mut bet = 0;
+        let mut times = 10;
+         match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'USDC') {
+            Result::Ok(_) => 'Done'.print(),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+            }
+        }
+        
+        assert(flip_safe_dispatcher.get_next_request_id().unwrap() == 2, 'A TX has been made');
+        stop_prank(flip_contract_address);
+
+        finalize_request(
+            ref flip_safe_dispatcher,
+            @flip_contract_address,
+            common::finalizer(),
+            *request_ids.at(index),
+            *random_numbers.at(index),
+            'Success'
+        );
+
+        let success_count = flip_safe_dispatcher
+            .get_request_status(*request_ids.at(index))
+            .unwrap()
+            .into();
+        assert(success_count != 0, 'TX must be finalized!');
         
         let mut times = 11;
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
