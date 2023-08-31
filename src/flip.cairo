@@ -16,7 +16,7 @@ trait IFlip<TContractState> {
         erc20_name: felt252
     );
     fn finalize_request(ref self: TContractState, requestId: felt252, rng: u256);
-    fn get_request_status(self: @TContractState, request_id: felt252) -> u256;
+    fn get_request_status(self: @TContractState, request_id: felt252) -> felt252;
     fn owner(self: @TContractState) -> ContractAddress;
     fn set_flip_fee(ref self: TContractState, newFee: u256);
     fn get_flip_fee(self: @TContractState) -> u256;
@@ -52,13 +52,14 @@ mod Flip {
     use zeroable::Zeroable;
     use traits::Into;
 
-    const MAX_BET_AMOUNT: u256 = 10;
+    const MAX_BET_TIMES:u256 = 10;
+    const LOSE:felt252 = 11;
 
     #[storage]
     struct Storage {
         next_request_id: felt252,
         requests: LegacyMap<felt252, requestMetadata>,
-        requestStatus: LegacyMap<felt252, u256>,
+        requestStatus: LegacyMap<felt252, felt252>,
         supported_erc20: LegacyMap<felt252, tokenMetadata>,
         treasury_address: felt252,
         flip_fee: u256,
@@ -150,7 +151,7 @@ mod Flip {
         fn get_next_request_id(self: @ContractState) -> felt252 {
             self.next_request_id.read()
         }
-        fn get_request_status(self: @ContractState, request_id: felt252) -> u256 {
+        fn get_request_status(self: @ContractState, request_id: felt252) -> felt252 {
             self.requestStatus.read(request_id)
         }
         fn get_request(self: @ContractState, request_id: felt252) -> requestMetadata {
@@ -172,7 +173,7 @@ mod Flip {
             let caller: ContractAddress = get_caller_address();
             let issuer = starknet::contract_address_to_felt252(caller);
             assert(((toss_result == 0) || (toss_result == 1)), 'Unsupported Coin Face.');
-            assert((times > 0) && (times <= MAX_BET_AMOUNT), 'Invalid amount.');
+            assert((times > 0) && (times <= MAX_BET_TIMES), 'Invalid amount.');
             match self.get_token_support(erc20_name) {
                 Option::Some(token_metadata) => {
                     assert(token_metadata.maxBetable > wager_amount, 'Wager too high');
@@ -232,7 +233,7 @@ mod Flip {
             assert(request_status == 0, 'Request already finalized.');
 
             let mut profit = 0;
-            let mut success_count = 0;
+            let mut success_count:u256 = 0;
             let mut index = 1;
             let mut seed = rng;
             loop {
@@ -248,7 +249,7 @@ mod Flip {
                 seed = keccak::keccak_u256s_le_inputs(array![seed].span()); // returns a u256;
             };
             if (success_count > 0) {
-                self.requestStatus.write(requestId, success_count); // 0 respresents unfinalized wager, anything above 0 and below 11 is a finalized wager
+                self.requestStatus.write(requestId, success_count.try_into().unwrap()); // 0 respresents unfinalized wager, anything above 0 and below 11 is a finalized wager
                 profit = (wager_amount * (100 - self.flip_fee.read()) / 100) * success_count;
                 match self.get_token_support(erc20_name) {
                     Option::Some(token_metadata) => {
@@ -265,7 +266,7 @@ mod Flip {
                 }
             }
             else {
-                self.requestStatus.write(requestId, MAX_BET_AMOUNT + 1); // In case of fail write 11, which represents invalid amount
+                self.requestStatus.write(requestId, LOSE); // In case of fail write 11, which represents invalid amount
             }
             self.emit(RequestFinalized { request_id: requestId, profit: profit });
         }

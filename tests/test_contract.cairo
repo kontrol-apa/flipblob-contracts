@@ -242,7 +242,7 @@ mod tests {
         let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
         let success_count = flip_safe_dispatcher
             .get_request_status(*request_ids.at(index))
-            .unwrap();
+            .unwrap().into();
         assert(success_count != 0, 'Transaction must be finalized!');
 
         assert(
@@ -337,7 +337,7 @@ mod tests {
 
         let success_count = flip_safe_dispatcher
             .get_request_status(*request_ids.at(index))
-            .unwrap();
+            .unwrap().into();
         assert(success_count != 0, 'Transaction must be finalized!');
 
         let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
@@ -370,7 +370,7 @@ mod tests {
 
         let success_count = flip_safe_dispatcher
             .get_request_status(*request_ids.at(index))
-            .unwrap();
+            .unwrap().into();
         assert(success_count != 0, 'Transaction must be finalized!');
 
         let post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
@@ -506,7 +506,7 @@ mod tests {
 
         let success_count = flip_safe_dispatcher
             .get_request_status(*request_ids.at(index))
-            .unwrap();
+            .unwrap().into();
         assert(success_count != 0, 'Transaction must be finalized!');
         assert(success_count <= times, 'Count greater than the amount');
         let mut post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
@@ -539,7 +539,7 @@ mod tests {
 
         let success_count = flip_safe_dispatcher
             .get_request_status(*request_ids.at(index))
-            .unwrap();
+            .unwrap().into();
         assert(success_count != 0, 'Transaction must be finalized!');
         assert(success_count <= times, 'Count greater than the amount');
         post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
