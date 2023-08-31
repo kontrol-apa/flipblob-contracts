@@ -101,6 +101,7 @@ mod Flip {
     #[derive(Drop, starknet::Event)]
     struct RequestFinalized {
         request_id: felt252,
+        success_count: u256,
         profit: u256
     }
 
@@ -268,7 +269,7 @@ mod Flip {
             else {
                 self.requestStatus.write(requestId, LOSE); // In case of fail write 11, which represents invalid amount
             }
-            self.emit(RequestFinalized { request_id: requestId, profit: profit });
+            self.emit(RequestFinalized { request_id: requestId, success_count:success_count , profit: profit });
         }
 
         fn set_flip_fee(ref self: ContractState, newFee: u256) {
