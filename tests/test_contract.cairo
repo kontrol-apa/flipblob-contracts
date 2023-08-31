@@ -1,6 +1,6 @@
-const HEAD: u256 = 1;
-const TAIL: u256 = 0;
-const INVALID: u256 = 2;
+const HEAD: felt252 = 1;
+const TAIL: felt252 = 0;
+const INVALID: felt252 = 2;
 
 
 mod tests {

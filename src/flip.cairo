@@ -12,7 +12,7 @@ trait IFlip<TContractState> {
         ref self: TContractState,
         times: u256,
         wager_amount: u256,
-        toss_result: u256,
+        toss_result: felt252,
         erc20_name: felt252
     );
     fn finalize_request(ref self: TContractState, requestId: felt252, rng: u256);
@@ -70,7 +70,7 @@ mod Flip {
         userAddress: ContractAddress,
         times: u256,
         wager_amount: u256,
-        chosen_coin_face: u256,
+        chosen_coin_face: felt252,
         token: felt252
     }
 
@@ -91,7 +91,7 @@ mod Flip {
     struct RequestIssued {
         wager_amount: u256,
         issuer: felt252,
-        toss_prediction: u256,
+        toss_prediction: felt252,
         times: u256,
         token: felt252,
         request_id: felt252
@@ -166,7 +166,7 @@ mod Flip {
             ref self: ContractState,
             times: u256,
             wager_amount: u256,
-            toss_result: u256,
+            toss_result: felt252,
             erc20_name: felt252
         ) {
             let caller: ContractAddress = get_caller_address();
@@ -237,7 +237,7 @@ mod Flip {
             let mut seed = rng;
             loop {
                 let toss_result: u256 = seed % 2;
-                if toss_result == toss_result_prediction {
+                if toss_result == toss_result_prediction.into() {
                     success_count += 1;
                 }
 
