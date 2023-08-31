@@ -24,3 +24,7 @@ fn user() -> ContractAddress {
 fn treasury() -> ContractAddress {
     contract_address_try_from_felt252('treasury').unwrap()
 }
+
+fn finalizer() -> ContractAddress {
+    contract_address_try_from_felt252('finalizer').unwrap()
+}
