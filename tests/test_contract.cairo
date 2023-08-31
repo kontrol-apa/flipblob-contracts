@@ -185,6 +185,33 @@ mod tests {
             0
         }
     }
+
+    fn finalize_request(ref flip_safe_dispatcher: IFlipSafeDispatcher, flip_contract_address: @ContractAddress, requestId:felt252, randomNumber:u256, error_message:felt252) {
+    start_prank(*flip_contract_address, common::finalizer()); // MOCK AFINALIZER TO FINALIZE BET
+        match flip_safe_dispatcher
+            .finalize_request(requestId, randomNumber) {
+            Result::Ok(_) => {
+                if error_message == 0 {
+                    'Passed.'.print()
+                }
+                else {
+                    panic_with_felt252('Should\'ve Panicked');
+                }
+            },
+            Result::Err(panic_data) => {
+                if error_message == 0 {
+                    panic_with_felt252((*panic_data.at(0)));
+                }
+                else {
+                    assert(*panic_data.at(0) == error_message, *panic_data.at(0));
+                }
+                
+            }
+        }
+        stop_prank(*flip_contract_address);
+}
+
+
     #[test]
     fn test_single_erc20() {
         let (flip_contract_address, meth_contract_address) = deploy_flip_and_mocketh();
@@ -228,16 +255,7 @@ mod tests {
         let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
         assert((pre_bet_balance - pre_balance) == (bet), '1Balances dont match!');
         
-        start_prank(flip_contract_address, common::finalizer()); // MOCK AFINALIZER TO FINALIZE BET
-        match flip_safe_dispatcher
-            .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-            Result::Ok(_) => 'Passed.'.print(),
-            Result::Err(panic_data) => {
-                (*panic_data.at(0)).print();
-                assert(*panic_data.at(0) == 'Request already finalized', *panic_data.at(0));
-            }
-        }
-        stop_prank(flip_contract_address);
+        finalize_request(ref flip_safe_dispatcher, @flip_contract_address, *request_ids.at(index), *random_numbers.at(index), 0 );
 
         let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
         let success_count = flip_safe_dispatcher
@@ -325,15 +343,8 @@ mod tests {
         let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
         assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
 
-        start_prank(flip_contract_address, common::finalizer()); // MOCK AFINALIZER TO FINALIZE BET
-        match flip_safe_dispatcher
-            .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-            Result::Ok(_) => 'Passed.'.print(),
-            Result::Err(panic_data) => {
-                (*panic_data.at(0)).print();
-            }
-        }
-        stop_prank(flip_contract_address);
+        finalize_request(ref flip_safe_dispatcher, @flip_contract_address, *request_ids.at(index), *random_numbers.at(index), 0 );
+
 
         let success_count = flip_safe_dispatcher
             .get_request_status(*request_ids.at(index))
@@ -358,15 +369,7 @@ mod tests {
         assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
 
 
-        start_prank(flip_contract_address, common::finalizer()); // MOCK AFINALIZER TO FINALIZE BET
-        match flip_safe_dispatcher
-            .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-            Result::Ok(_) => 'Passed.'.print(),
-            Result::Err(panic_data) => {
-                (*panic_data.at(0)).print();
-            }
-        }
-        stop_prank(flip_contract_address);
+        finalize_request(ref flip_safe_dispatcher, @flip_contract_address, *request_ids.at(index), *random_numbers.at(index), 0 );
 
         let success_count = flip_safe_dispatcher
             .get_request_status(*request_ids.at(index))
@@ -399,34 +402,13 @@ mod tests {
         }
         stop_prank(flip_contract_address);
 
-        start_prank(flip_contract_address, common::finalizer()); // MOCK AFINALIZER TO FINALIZE BET
-        match flip_safe_dispatcher
-            .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-            Result::Ok(_) => 'Passed.'.print(),
-            Result::Err(panic_data) => {
-                (*panic_data.at(0)).print();
-                assert(*panic_data.at(0) == 'Request already finalized.', *panic_data.at(0));
-            }
-        }
+        
 
-        match flip_safe_dispatcher
-            .finalize_request(*request_ids.at(index + 1), *random_numbers.at(index)) {
-            Result::Ok(_) => 'Passed.'.print(),
-            Result::Err(panic_data) => {
-                (*panic_data.at(0)).print();
-                assert(*panic_data.at(0) == 'Wrong number.', *panic_data.at(0));
-            }
-        }
+        finalize_request(ref flip_safe_dispatcher, @flip_contract_address, *request_ids.at(index), *random_numbers.at(index), 'Request already finalized.' );
 
         index = index + 1;
-        match flip_safe_dispatcher
-            .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-            Result::Ok(_) => 'Passed.'.print(),
-            Result::Err(panic_data) => {
-                (*panic_data.at(0)).print();
-            }
-        }
-        stop_prank(flip_contract_address);
+        finalize_request(ref flip_safe_dispatcher, @flip_contract_address, *request_ids.at(index), *random_numbers.at(index), 0 );
+      
 
     }
     #[test]
@@ -494,15 +476,8 @@ mod tests {
         let mut pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
         assert((pre_bet_balance - pre_balance) == (bet * times), 'Issue Balances dont match!');
 
-        start_prank(flip_contract_address, common::finalizer()); // MOCK AFINALIZER TO FINALIZE BET
-        match flip_safe_dispatcher
-            .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-            Result::Ok(_) => 'Passed.'.print(),
-            Result::Err(panic_data) => {
-                (*panic_data.at(0)).print();
-            }
-        }
-        stop_prank(flip_contract_address);
+        finalize_request(ref flip_safe_dispatcher, @flip_contract_address, *request_ids.at(index), *random_numbers.at(index), 0 );
+
 
         let success_count = flip_safe_dispatcher
             .get_request_status(*request_ids.at(index))
@@ -527,16 +502,7 @@ mod tests {
         pre_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
         assert((pre_bet_balance - pre_balance) == (bet * times), 'Issue Balances dont match!');
 
-        start_prank(flip_contract_address, common::finalizer()); // MOCK AFINALIZER TO FINALIZE BET
-        match flip_safe_dispatcher
-            .finalize_request(*request_ids.at(index), *random_numbers.at(index)) {
-            Result::Ok(_) => 'Passed.'.print(),
-            Result::Err(panic_data) => {
-                (*panic_data.at(0)).print();
-            }
-        }
-        stop_prank(flip_contract_address);
-
+        finalize_request(ref flip_safe_dispatcher, @flip_contract_address, *request_ids.at(index), *random_numbers.at(index), 0 );
         let success_count = flip_safe_dispatcher
             .get_request_status(*request_ids.at(index))
             .unwrap().into();
@@ -561,3 +527,6 @@ mod tests {
         stop_prank(flip_contract_address);
     }
 }
+
+
+
