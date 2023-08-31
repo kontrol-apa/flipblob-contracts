@@ -197,14 +197,14 @@ mod tests {
         start_prank(*flip_contract_address, finalizer); // MOCK AFINALIZER TO FINALIZE BET
         match flip_safe_dispatcher.finalize_request(requestId, randomNumber) {
             Result::Ok(_) => {
-                if error_message == 0 {
+                if error_message == 'Success' {
                     'Passed.'.print()
                 } else {
                     panic_with_felt252('Should\'ve Panicked');
                 }
             },
             Result::Err(panic_data) => {
-                if error_message == 0 {
+                if error_message == 'Success' {
                     panic_with_felt252((*panic_data.at(0)));
                 } else {
                     assert(*panic_data.at(0) == error_message, *panic_data.at(0));
@@ -270,7 +270,7 @@ mod tests {
             common::finalizer(),
             *request_ids.at(index),
             *random_numbers.at(index),
-            0
+            'Success'
         );
 
         let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
@@ -362,7 +362,7 @@ mod tests {
             common::finalizer(),
             *request_ids.at(index),
             *random_numbers.at(index),
-            0
+            'Success'
         );
 
         let success_count = flip_safe_dispatcher
@@ -394,7 +394,7 @@ mod tests {
             common::finalizer(),
             *request_ids.at(index),
             *random_numbers.at(index),
-            0
+            'Success'
         );
 
         let success_count = flip_safe_dispatcher
@@ -445,7 +445,7 @@ mod tests {
             common::finalizer(),
             *request_ids.at(index),
             *random_numbers.at(index),
-            0
+            'Success'
         );
     }
     #[test]
@@ -513,7 +513,7 @@ mod tests {
             common::finalizer(),
             *request_ids.at(index),
             *random_numbers.at(index),
-            0
+            'Success'
         );
 
         let success_count = flip_safe_dispatcher
@@ -546,7 +546,7 @@ mod tests {
             common::finalizer(),
             *request_ids.at(index),
             *random_numbers.at(index),
-            0
+            'Success'
         );
         let success_count = flip_safe_dispatcher
             .get_request_status(*request_ids.at(index))
