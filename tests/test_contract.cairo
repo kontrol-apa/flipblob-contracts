@@ -410,7 +410,6 @@ mod tests {
             'Balances dont match!'
         );
 
-        index = index;
         bet = 11000000;
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
         match flip_safe_dispatcher.issue_request(1, bet, super::INVALID, 'METH') {
