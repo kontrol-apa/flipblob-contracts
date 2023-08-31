@@ -253,7 +253,7 @@ mod tests {
         stop_prank(flip_contract_address);
 
         let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
-        assert((pre_bet_balance - pre_balance) == (bet), '1Balances dont match!');
+        assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
 
         finalize_request(
             ref flip_safe_dispatcher,
@@ -283,7 +283,7 @@ mod tests {
         assert(
             (post_balance
                 - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
-            '2Balances dont match!'
+            'Balances dont match!'
         );
 
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
