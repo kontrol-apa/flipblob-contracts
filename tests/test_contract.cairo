@@ -207,6 +207,7 @@ mod tests {
                 if error_message == 'Success' {
                     panic_with_felt252((*panic_data.at(0)));
                 } else {
+                    (*panic_data.at(0)).print();
                     assert(*panic_data.at(0) == error_message, *panic_data.at(0));
                 }
             }
@@ -694,8 +695,8 @@ mod tests {
         stop_prank(flip_contract_address);
     }
 
-        #[test]
-    fn test_max_wager() {
+    #[test]
+    fn test_ownership() {
         let (flip_contract_address, meth_contract_address, usdc_contract_address) =
             deploy_flip_and_mocketh_usdc();
         let mut flip_safe_dispatcher = IFlipSafeDispatcher {
@@ -741,79 +742,62 @@ mod tests {
             @usdc_contract_address,
             1000000000000000000000000000
         );
-        let mut index = 0;
-        let mut bet = max_bet_amount_meth;
-        let mut times = 1;
-        start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'METH') {
+
+        start_prank(flip_contract_address, common::badguy()); // MOCK ADMIN TO ADD COIN SUPPORT
+        match flip_safe_dispatcher.set_token_support('SOL', meth_contract_address, 100) {
             Result::Ok(_) => panic_with_felt252('Should\'ve Panicked'),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
-                assert(*panic_data.at(0) == 'Wager too high', *panic_data.at(0));
+                assert(*panic_data.at(0) == 'Caller is not the owner', *panic_data.at(0));
             }
         }
-        let success_count = flip_safe_dispatcher
-            .get_request_status(*request_ids.at(index))
-            .unwrap()
-            .into();
-        assert(success_count == 0, 'TX musn`t not be finalized!');
-        assert(flip_safe_dispatcher.get_next_request_id().unwrap() == 1, 'No TX has been made');
 
-
-        let mut bet = max_bet_amount_usdc;
-        let mut times = 10;
-         match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'USDC') {
+        match flip_safe_dispatcher.set_max_bet('SOL', 100000) {
             Result::Ok(_) => panic_with_felt252('Should\'ve Panicked'),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
-                assert(*panic_data.at(0) == 'Wager too high', *panic_data.at(0));
+                assert(*panic_data.at(0) == 'Caller is not the owner', *panic_data.at(0));
             }
         }
-        let success_count = flip_safe_dispatcher
-            .get_request_status(*request_ids.at(index))
-            .unwrap()
-            .into();
-        assert(success_count == 0, 'TX musn`t be finalized!');
-        assert(flip_safe_dispatcher.get_next_request_id().unwrap() == 1, 'No TX has been made');
 
-        
-        let mut bet = 0;
-        let mut times = 10;
-         match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'USDC') {
-            Result::Ok(_) => 'Done'.print(),
+        match flip_safe_dispatcher.update_treasury('badguy') {
+            Result::Ok(_) => panic_with_felt252('Should\'ve Panicked'),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
+                assert(*panic_data.at(0) == 'Caller is not the owner', *panic_data.at(0));
             }
         }
-        
-        assert(flip_safe_dispatcher.get_next_request_id().unwrap() == 2, 'A TX has been made');
+
+        match flip_safe_dispatcher.set_finalizer(common::badguy()) {
+            Result::Ok(_) => panic_with_felt252('Should\'ve Panicked'),
+            Result::Err(panic_data) => {
+                (*panic_data.at(0)).print();
+                assert(*panic_data.at(0) == 'Caller is not the owner', *panic_data.at(0));
+            }
+        }
         stop_prank(flip_contract_address);
+
+        let index = 0;
+        let bet = 1000000;
+        let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
+        flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'METH');
+
+        let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
 
         finalize_request(
             ref flip_safe_dispatcher,
             @flip_contract_address,
-            common::finalizer(),
+            common::treasury(),
             *request_ids.at(index),
             *random_numbers.at(index),
-            'Success'
+            'Only Finalizer'
         );
 
-        let success_count = flip_safe_dispatcher
-            .get_request_status(*request_ids.at(index))
-            .unwrap()
-            .into();
-        assert(success_count != 0, 'TX must be finalized!');
-        
-        let mut times = 11;
-        start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'METH') {
-            Result::Ok(_) => panic_with_felt252('Should\'ve Panicked'),
-            Result::Err(panic_data) => {
-                (*panic_data.at(0)).print();
-                assert(*panic_data.at(0) == 'Invalid amount.', *panic_data.at(0));
-            }
-        }
         stop_prank(flip_contract_address);
+
+        
     }
 }
 
