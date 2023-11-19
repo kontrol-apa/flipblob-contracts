@@ -1,5 +1,5 @@
 [package]
-name = "FlipBlob"
+name = "flipblob"
 version = "0.1.0"
 
 
@@ -15,8 +15,8 @@ casm = false   # Enable CASM codegen.
 
 
 [dependencies]
-starknet = "2.2.0"
-openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts", branch = "cairo-2" }
+starknet = ">=2.2.0"
+openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts", tag = "v0.7.0" }
 snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag = "v0.5.0" }
 
 [tool.snforge]

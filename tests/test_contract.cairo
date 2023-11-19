@@ -12,12 +12,12 @@ mod tests {
     use starknet::ContractAddress;
     use starknet::Felt252TryIntoContractAddress;
     use clone::Clone;
-    use FlipBlob::flip::IFlipSafeDispatcher;
-    use FlipBlob::flip::IFlipSafeDispatcherTrait;
-    use FlipBlob::merc20::IERC20SafeDispatcherTrait;
-    use FlipBlob::merc20::IERC20SafeDispatcher;
+    use flipblob::flip::IFlipSafeDispatcher;
+    use flipblob::flip::IFlipSafeDispatcherTrait;
+    use flipblob::merc20::IERC20SafeDispatcherTrait;
+    use flipblob::merc20::IERC20SafeDispatcher;
     use starknet::get_caller_address;
-    use FlipBlob::common;
+    use flipblob::common;
     use snforge_std::{declare, ContractClassTrait, start_prank, stop_prank, PrintTrait};
 
     const MAX_BET_AMOUNT: u256 = 10;

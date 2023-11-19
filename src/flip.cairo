@@ -32,6 +32,7 @@ trait IFlip<TContractState> {
     fn set_max_bet(ref self: TContractState, tokenName: felt252, maxBetable: u256);
     fn set_finalizer(ref self: TContractState, finalizer: ContractAddress);
     fn get_finalizer(self: @TContractState) -> ContractAddress;
+    fn get_latest_flip_by_user(self: @TContractState, userAddress: ContractAddress) -> u256 ;
 }
 
 #[starknet::interface]
@@ -331,6 +332,22 @@ mod Flip {
 
         fn get_finalizer(self: @ContractState) ->  ContractAddress {
             self.finalizer.read()
+        }
+
+        fn get_latest_flip_by_user(self: @ContractState, userAddress: ContractAddress) -> u256 {
+            let mut index = self.next_request_id.read() - 1;
+            let mut located_index:u256 = 0;
+            loop {
+                let request = self.requests.read(index);
+                if request.userAddress == userAddress {
+                    located_index = index.into();
+                }
+                if index == 0 {
+                    break;
+                }
+                index -= 1;
+            };
+            return located_index;
         }
 
     }
