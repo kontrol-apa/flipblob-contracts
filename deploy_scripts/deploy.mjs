@@ -12,6 +12,7 @@ const tokenWETHMaxBettable = "15000000000000000"
 const treasuryAddress = "0x31c66f44d8455e5cac18b7016476685af8bd78bf4128cb5375ff2c45bc137c2";
 const ownerAddress = "0x31c66f44d8455e5cac18b7016476685af8bd78bf4128cb5375ff2c45bc137c2";
 const finalizerAddress = "0x003CF8aa30dA7aDB1D5a28687BF6802d80Bb8A02FBC9A4142020EC8309D7aaD0";
+const argentWalletAddress = "0x016C5242381A0FF101B239bf872462a0e63B70d9c94ca493EAa606ed0eA1baE1";
 const flipFeePercentage = 5;
 
 const absolutePath = "../target/dev/"
@@ -28,7 +29,6 @@ const account = new Account(
     privateKey
 );
 
-// Declare & deploy Test contract in devnet
 const compiledTestSierra = json.parse(fs.readFileSync( absolutePath + "flipblob_Flip.sierra.json").toString( "ascii"));
 const compiledTestCasm = json.parse(fs.readFileSync( absolutePath + "flipblob_Flip.casm.json").toString( "ascii"));
 
@@ -49,8 +49,12 @@ console.log('✅ FlibBlob Contract connected at =', myTestContract.address);
 myTestContract.connect(account);
 
 const tokenSupportTx = await myTestContract.set_token_support(tokenWETHIdentifier,tokenWETHAddress,tokenWETHMaxBettable);
-const receipt = await provider.waitForTransaction(tokenSupportTx.transaction_hash);
-console.log('Status:', receipt.execution_status);
+const tokenSupportReceipt = await provider.waitForTransaction(tokenSupportTx.transaction_hash);
+console.log('Status:', tokenSupportReceipt.execution_status);
+
+const transferOwnershipTx = await myTestContract.transfer_ownership(argentWalletAddress);
+const transferOwnershipReceipt = await provider.waitForTransaction(transferOwnershipTx.transaction_hash);
+console.log('Status:', transferOwnershipReceipt.execution_status);
 
 console.log(`Token support set for ${tokenWETHAddress} with the name ${tokenWETHIdentifier}. The max bettable in Wei is : ${tokenWETHMaxBettable}`);
 console.log("Make sure that: ");
