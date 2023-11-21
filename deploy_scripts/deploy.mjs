@@ -1,8 +1,9 @@
 
 import { Contract, Account, constants, CallData, RpcProvider } from 'starknet';
 import { json } from 'starknet';
-
+import { execSync } from 'child_process';
 import * as fs from 'fs';
+
 const provider = new RpcProvider({ sequencer: { network: constants.NetworkName.SN_GOERLI } }) // for testnet
 //const provider = new RpcProvider({ sequencer: { network: constants.NetworkName.SN_MAIN } }) // for testnet
 
@@ -22,13 +23,22 @@ const flipFeePercentage = 5;
 const absolutePath = "../target/dev/"
 
 
+
+try {
+    const stdout = execSync('scarb build');
+    console.log(`stdout: ${stdout}`);
+} catch (error) {
+    console.error(`Execution error: ${error}`);
+    console.error(`stderr: ${error.stderr}`);
+}
+
+
+
 const account = new Account(
     provider,
     accountAddress,
     privateKey
 );
-
-
 
 // Declare & deploy Test contract in devnet
 const compiledTestSierra = json.parse(fs.readFileSync( absolutePath + "flipblob_Flip.sierra.json").toString( "ascii"));
