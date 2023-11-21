@@ -9,8 +9,8 @@ const tokenWETHAddress = '0x034e31357d1c3693bda06d04bf4c51557514ECed5A8e9973bDb7
 const tokenWETHIdentifier = "WETH"
 const tokenWETHMaxBettable = "15000000000000000"
 
-const treasuryAddress = "0x003CF8aa30dA7aDB1D5a28687BF6802d80Bb8A02FBC9A4142020EC8309D7aaD0";
-const ownerAddress = "0x003CF8aa30dA7aDB1D5a28687BF6802d80Bb8A02FBC9A4142020EC8309D7aaD0";
+const treasuryAddress = "0x31c66f44d8455e5cac18b7016476685af8bd78bf4128cb5375ff2c45bc137c2";
+const ownerAddress = "0x31c66f44d8455e5cac18b7016476685af8bd78bf4128cb5375ff2c45bc137c2";
 const finalizerAddress = "0x003CF8aa30dA7aDB1D5a28687BF6802d80Bb8A02FBC9A4142020EC8309D7aaD0";
 const flipFeePercentage = 5;
 
@@ -20,7 +20,7 @@ const absolutePath = "../target/dev/"
 
 scarbBuild();
 
-const { privateKey, accountAddress, provider, network } = getConfig("TESTNET");
+const { privateKey, accountAddress, provider } = getConfig("TESTNET");
 
 const account = new Account(
     provider,
@@ -49,7 +49,9 @@ console.log('✅ FlibBlob Contract connected at =', myTestContract.address);
 myTestContract.connect(account);
 
 const tokenSupportTx = await myTestContract.set_token_support(tokenWETHIdentifier,tokenWETHAddress,tokenWETHMaxBettable);
-await provider.waitForTransaction(tokenSupportTx.transaction_hash);
+const receipt = await provider.waitForTransaction(tokenSupportTx.transaction_hash);
+console.log('Status:', receipt.execution_status);
+
 console.log(`Token support set for ${tokenWETHAddress} with the name ${tokenWETHIdentifier}. The max bettable in Wei is : ${tokenWETHMaxBettable}`);
 console.log("Make sure that: ");
 console.log(`1. Treasury is funded -> ${treasuryAddress} `);
