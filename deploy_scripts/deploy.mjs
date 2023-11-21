@@ -2,14 +2,8 @@
 import { Contract, Account, constants, CallData, RpcProvider } from 'starknet';
 import { json } from 'starknet';
 import { execSync } from 'child_process';
-import * as fs from 'fs';
+import fs from 'fs';
 
-const provider = new RpcProvider({ sequencer: { network: constants.NetworkName.SN_GOERLI } }) // for testnet
-//const provider = new RpcProvider({ sequencer: { network: constants.NetworkName.SN_MAIN } }) // for testnet
-
-// devnet private key from Account #0 if generated with --seed 0
-const privateKey = process.env.STARKNET_PRIVATE_KEY
-const accountAddress = process.env.STARKNET_ACCOUNT_ADDRESS;
 
 const tokenWETHAddress = '0x034e31357d1c3693bda06d04bf4c51557514ECed5A8e9973bDb772f7fB978B36'
 const tokenWETHIdentifier = "WETH"
@@ -24,15 +18,9 @@ const absolutePath = "../target/dev/"
 
 
 
-try {
-    const stdout = execSync('scarb build');
-    console.log(`stdout: ${stdout}`);
-} catch (error) {
-    console.error(`Execution error: ${error}`);
-    console.error(`stderr: ${error.stderr}`);
-}
+scarbBuild();
 
-
+const { privateKey, accountAddress, provider, network } = getConfig("TESTNET");
 
 const account = new Account(
     provider,
@@ -42,7 +30,7 @@ const account = new Account(
 
 // Declare & deploy Test contract in devnet
 const compiledTestSierra = json.parse(fs.readFileSync( absolutePath + "flipblob_Flip.sierra.json").toString( "ascii"));
-const compiledTestCasm = json.parse(fs.readFileSync( absolutePath + "./flipblob_Flip.casm.json").toString( "ascii"));
+const compiledTestCasm = json.parse(fs.readFileSync( absolutePath + "flipblob_Flip.casm.json").toString( "ascii"));
 
 const contractCallData = new CallData(compiledTestSierra.abi);
 const contractConstructor = contractCallData.compile("constructor", {
@@ -68,3 +56,43 @@ console.log(`1. Treasury is funded -> ${treasuryAddress} `);
 console.log(`2. Treasury has approved the FlipBlob contract for spenditure for ${tokenWETHIdentifier} -> ${tokenWETHAddress}`);
 console.log(`3. Finalizer is funded -> ${finalizerAddress}`);
 console.log("4. Finalizer is set in the backend.")
+
+
+
+function getConfig(network) {
+    let privateKey = process.env.STARKNET_PRIVATE_KEY;
+    let accountAddress = process.env.STARKNET_ACCOUNT_ADDRESS;
+    let provider;
+    // Check if environment variables are set
+    if (!privateKey || !accountAddress) {
+        try {
+            // Read configuration from file
+            const configFile = fs.readFileSync('config.json', 'utf8');
+            const config = JSON.parse(configFile);
+
+            // Assign values based on the specified network
+            privateKey = config[network].STARKNET_PRIVATE_KEY;
+            accountAddress = config[network].STARKNET_ACCOUNT_ADDRESS;
+        } catch (error) {
+            console.error('Error reading config file:', error);
+            process.exit(1);
+        }
+    }
+    if (network == "TESTNET") {
+         provider = new RpcProvider({ sequencer: { network: constants.NetworkName.SN_GOERLI } }) // for testnet
+    }
+    else {
+         provider = new RpcProvider({ sequencer: { network: constants.NetworkName.SN_MAIN } }) // for testnet
+    }
+    return { privateKey, accountAddress, provider};
+}
+
+function scarbBuild() {
+    try {
+        const stdout = execSync('scarb build');
+        console.log(`stdout: ${stdout}`);
+    } catch (error) {
+        console.error(`Execution error: ${error}`);
+        console.error(`stderr: ${error.stderr}`);
+    }
+}

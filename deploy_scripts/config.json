@@ -1,0 +1,10 @@
+{
+    "MAINNET": {
+        "STARKNET_PRIVATE_KEY": "",
+        "STARKNET_ACCOUNT_ADDRESS": ""
+    },
+    "TESTNET": {
+        "STARKNET_PRIVATE_KEY": "",
+        "STARKNET_ACCOUNT_ADDRESS": ""
+    }
+}
