@@ -1,5 +1,5 @@
 
-import { Contract, Account, constants, CallData, RpcProvider } from 'starknet';
+import { Contract, Account, constants, CallData, RpcProvider, shortString } from 'starknet';
 import { json } from 'starknet';
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -7,7 +7,7 @@ import fs from 'fs';
 
 const tokenWETHAddress = '0x034e31357d1c3693bda06d04bf4c51557514ECed5A8e9973bDb772f7fB978B36'
 const tokenWETHIdentifier = "WETH"
-const tokenWETHMaxBettable = "15000000000000000"
+const tokenWETHMaxBettable = "150000000000000000"
 const tokenWETHMinBettable = "9900000000000000"
 
 const treasuryAddress = "0x31c66f44d8455e5cac18b7016476685af8bd78bf4128cb5375ff2c45bc137c2";
@@ -49,13 +49,13 @@ console.log("FlipBlob Contract Class Hash =", deployResponse.declare.class_hash)
 console.log('✅ FlibBlob Contract connected at =', myTestContract.address);
 myTestContract.connect(account);
 
-const tokenSupportTx = await myTestContract.set_token_support(tokenWETHIdentifier, tokenWETHAddress, tokenWETHMaxBettable, tokenWETHMinBettable);
+const tokenSupportTx = await myTestContract.set_token_support(shortString.encodeShortString(tokenWETHIdentifier), tokenWETHAddress, tokenWETHMaxBettable, tokenWETHMinBettable);
 const tokenSupportReceipt = await provider.waitForTransaction(tokenSupportTx.transaction_hash);
 console.log('Status:', tokenSupportReceipt.execution_status);
 
-const transferOwnershipTx = await myTestContract.transfer_ownership(argentWalletAddress);
-const transferOwnershipReceipt = await provider.waitForTransaction(transferOwnershipTx.transaction_hash);
-console.log('Status:', transferOwnershipReceipt.execution_status);
+// const transferOwnershipTx = await myTestContract.transfer_ownership(argentWalletAddress);
+// const transferOwnershipReceipt = await provider.waitForTransaction(transferOwnershipTx.transaction_hash);
+// console.log('Status:', transferOwnershipReceipt.execution_status);
 
 console.log(`Token support set for ${tokenWETHAddress} with the name ${tokenWETHIdentifier}. The max bettable in Wei is : ${tokenWETHMaxBettable}`);
 console.log("Make sure that: ");
