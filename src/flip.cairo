@@ -24,12 +24,14 @@ trait IFlip<TContractState> {
         ref self: TContractState,
         tokenName: felt252,
         tokenAddress: ContractAddress,
-        maxBetable: u256
+        maxBetable: u128,
+        minBetable: u128
     );
     fn is_token_supported(self: @TContractState, tokenName: felt252) -> bool;
     fn get_token_address(self: @TContractState, tokenName: felt252) -> ContractAddress;
     fn update_treasury(ref self: TContractState, treasuryAddress: felt252);
-    fn set_max_bet(ref self: TContractState, tokenName: felt252, maxBetable: u256);
+    fn set_max_bet(ref self: TContractState, tokenName: felt252, maxBetable: u128);
+    fn set_min_bet(ref self: TContractState, tokenName: felt252, minBetable: u128);
     fn set_finalizer(ref self: TContractState, finalizer: ContractAddress);
     fn get_finalizer(self: @TContractState) -> ContractAddress;
     fn get_latest_flip_by_user(self: @TContractState, userAddress: ContractAddress) -> u256 ;
@@ -79,7 +81,8 @@ mod Flip {
     #[derive(Copy, Drop, Serde, starknet::Store)]
     struct tokenMetadata {
         tokenAddress: ContractAddress,
-        maxBetable: u256
+        maxBetable: u128,
+        minBetable: u128,
     }
 
     #[event]
@@ -178,7 +181,8 @@ mod Flip {
             assert((times > 0) && (times <= MAX_BET_TIMES), 'Invalid amount.');
             match self.get_token_support(erc20_name) {
                 Option::Some(token_metadata) => {
-                    assert(token_metadata.maxBetable > wager_amount, 'Wager too high');
+                    assert(token_metadata.maxBetable.into() > wager_amount, 'Wager too high');
+                    assert(token_metadata.minBetable.into() <= wager_amount, 'Wager too low');
 
                     let treasuryBalance = ERC20Dispatcher {
                         contract_address: token_metadata.tokenAddress
@@ -288,18 +292,27 @@ mod Flip {
             ref self: ContractState,
             tokenName: felt252,
             tokenAddress: ContractAddress,
-            maxBetable: u256
+            maxBetable: u128,
+            minBetable: u128,
         ) {
             let ownable = Ownable::unsafe_new_contract_state();
             InternalImpl::assert_only_owner(@ownable);
-            self.supported_erc20.write(tokenName, tokenMetadata { tokenAddress, maxBetable });
+            self.supported_erc20.write(tokenName, tokenMetadata { tokenAddress, maxBetable, minBetable });
         }
 
-        fn set_max_bet(ref self: ContractState, tokenName: felt252, maxBetable: u256) {
+        fn set_max_bet(ref self: ContractState, tokenName: felt252, maxBetable: u128) {
             let ownable = Ownable::unsafe_new_contract_state();
             InternalImpl::assert_only_owner(@ownable);
             let mut tokenMetadata = self.supported_erc20.read(tokenName);
             tokenMetadata.maxBetable = maxBetable;
+            self.supported_erc20.write(tokenName, tokenMetadata);
+        }
+
+        fn set_min_bet(ref self: ContractState, tokenName: felt252, minBetable: u128) {
+            let ownable = Ownable::unsafe_new_contract_state();
+            InternalImpl::assert_only_owner(@ownable);
+            let mut tokenMetadata = self.supported_erc20.read(tokenName);
+            tokenMetadata.minBetable = minBetable;
             self.supported_erc20.write(tokenName, tokenMetadata);
         }
 
