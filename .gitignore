@@ -3,3 +3,4 @@ __pycache__
 *.pyc
 *.png
 /deploy_scripts/node_modules
+/deploy_scripts/config.json
