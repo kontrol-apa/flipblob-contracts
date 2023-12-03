@@ -72,7 +72,7 @@ mod tests {
 
         let meth_contract_address = deploy_contract('ERC20', calldata);
         let meth_safe_dispatcher = ERC20ABIDispatcher { contract_address: meth_contract_address };
-        let balance_of_treasury = meth_safe_dispatcher.balance_of(common::treasury()).unwrap();
+        let balance_of_treasury = meth_safe_dispatcher.balance_of(common::treasury());
         assert(balance_of_treasury == initialSupply, 'Balances dont match!');
 
         (flip_contract_address, meth_contract_address)
@@ -114,7 +114,7 @@ mod tests {
 
         let addresses: Array<ContractAddress> = deploy_multiple_contracts('ERC20', calldatas);
         let usdc_safe_dispatcher = ERC20ABIDispatcher { contract_address: *addresses.at(0) };
-        let balance_of_treasury = usdc_safe_dispatcher.balance_of(common::treasury()).unwrap();
+        let balance_of_treasury = usdc_safe_dispatcher.balance_of(common::treasury());
         assert(balance_of_treasury == initialSupply, 'Balances dont match!');
 
         (flip_contract_address, *addresses.at(1), *addresses.at(0))
@@ -248,12 +248,12 @@ mod tests {
 
         let index = 0;
         let bet = 1000000;
-        let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user());
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
         flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'METH');
         stop_prank(flip_contract_address);
 
-        let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        let pre_balance = meth_safe_dispatcher.balance_of(common::user());
         assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
 
         finalize_request(
@@ -274,7 +274,7 @@ mod tests {
             'Success'
         );
 
-        let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        let post_balance = meth_safe_dispatcher.balance_of(common::user());
         let success_count = flip_safe_dispatcher
             .get_request_status(*request_ids.at(index))
             .unwrap()
@@ -349,12 +349,12 @@ mod tests {
 
         let mut index = 0;
         let mut bet = 1000000;
-        let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user());
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
         flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'METH');
         stop_prank(flip_contract_address);
 
-        let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        let pre_balance = meth_safe_dispatcher.balance_of(common::user());
         assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
 
         finalize_request(
@@ -372,7 +372,7 @@ mod tests {
             .into();
         assert(success_count != 0, 'TX must be finalized!');
 
-        let post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        let post_balance = meth_safe_dispatcher.balance_of(common::user());
         assert(
             (post_balance
                 - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
@@ -381,12 +381,12 @@ mod tests {
 
         index = index + 1;
         bet = 11000000;
-        let pre_bet_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
+        let pre_bet_balance = usdc_safe_dispatcher.balance_of(common::user());
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
         flip_safe_dispatcher.issue_request(1, bet, super::TAIL, 'USDC');
         stop_prank(flip_contract_address);
 
-        let pre_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
+        let pre_balance = usdc_safe_dispatcher.balance_of(common::user());
         assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
 
         finalize_request(
@@ -404,7 +404,7 @@ mod tests {
             .into();
         assert(success_count != 0, 'TX must be finalized!');
 
-        let post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
+        let post_balance = usdc_safe_dispatcher.balance_of(common::user());
         assert(
             (post_balance
                 - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
@@ -499,12 +499,12 @@ mod tests {
         let mut index = 0;
         let mut bet = 10000000;
         let mut times = 10;
-        let mut pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        let mut pre_bet_balance = meth_safe_dispatcher.balance_of(common::user());
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
         flip_safe_dispatcher.issue_request(times, bet, super::TAIL, 'METH');
         stop_prank(flip_contract_address);
 
-        let mut pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        let mut pre_balance = meth_safe_dispatcher.balance_of(common::user());
         assert((pre_bet_balance - pre_balance) == (bet * times), 'Issue Balances dont match!');
 
         finalize_request(
@@ -522,7 +522,7 @@ mod tests {
             .into();
         assert(success_count != 0, 'TX must be finalized!');
         assert(success_count <= times, 'Count greater than the amount');
-        let mut post_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        let mut post_balance = meth_safe_dispatcher.balance_of(common::user());
         assert(
             (post_balance
                 - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
@@ -532,12 +532,12 @@ mod tests {
         bet = 555555;
         times = 3;
         index = index + 1;
-        pre_bet_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
+        pre_bet_balance = usdc_safe_dispatcher.balance_of(common::user());
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
         flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'USDC');
         stop_prank(flip_contract_address);
 
-        pre_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
+        pre_balance = usdc_safe_dispatcher.balance_of(common::user());
         assert((pre_bet_balance - pre_balance) == (bet * times), 'Issue Balances dont match!');
 
         finalize_request(
@@ -554,7 +554,7 @@ mod tests {
             .into();
         assert(success_count != 0, 'TX must be finalized!');
         assert(success_count <= times, 'Count greater than the amount');
-        post_balance = usdc_safe_dispatcher.balance_of(common::user()).unwrap();
+        post_balance = usdc_safe_dispatcher.balance_of(common::user());
         assert(
             (post_balance
                 - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
@@ -779,11 +779,11 @@ mod tests {
 
         let index = 0;
         let bet = 1000000;
-        let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user());
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
         flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'METH');
 
-        let pre_balance = meth_safe_dispatcher.balance_of(common::user()).unwrap();
+        let pre_balance = meth_safe_dispatcher.balance_of(common::user());
         assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
 
         finalize_request(
