@@ -40,7 +40,7 @@ trait IFlip<TContractState> {
 #[starknet::interface]
 trait ERC20<TContractState> {
     fn transferFrom(ref self: TContractState, sender: felt252, recipient: felt252, amount: u256);
-    fn balance_of(self: @TContractState, account: felt252) -> u256;
+    fn balanceOf(self: @TContractState, account: felt252) -> u256;
 }
 
 #[starknet::contract]
@@ -195,7 +195,7 @@ mod Flip {
                     let treasuryBalance = ERC20Dispatcher {
                         contract_address: token_metadata.tokenAddress
                     }
-                        .balance_of(self.treasury_address.read());
+                        .balanceOf(self.treasury_address.read());
 
                     assert(treasuryBalance >= wager_amount * times, 'Treasury cant accept the bet');
 
