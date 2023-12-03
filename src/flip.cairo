@@ -7,7 +7,6 @@ use starknet::ContractAddress;
 trait IFlip<TContractState> {
     fn get_next_request_id(self: @TContractState) -> felt252;
     fn get_request(self: @TContractState, request_id: felt252) -> Flip::requestMetadata;
-    fn transfer_ownership(ref self: TContractState, new_owner: ContractAddress);
     fn issue_request(
         ref self: TContractState,
         times: u256,
@@ -17,7 +16,6 @@ trait IFlip<TContractState> {
     );
     fn finalize_request(ref self: TContractState, requestId: felt252, rng: u256);
     fn get_request_status(self: @TContractState, request_id: felt252) -> felt252;
-    fn owner(self: @TContractState) -> ContractAddress;
     fn set_flip_fee(ref self: TContractState, newFee: u256);
     fn get_flip_fee(self: @TContractState) -> u256;
     fn set_token_support(
@@ -158,10 +156,6 @@ mod Flip {
 
     #[external(v0)]
     impl FlipImpl of super::IFlip<ContractState> {
-        fn owner(self: @ContractState) -> ContractAddress {
-            self.ownable.owner()
-        }
-
         fn get_next_request_id(self: @ContractState) -> felt252 {
             self.next_request_id.read()
         }
@@ -170,10 +164,6 @@ mod Flip {
         }
         fn get_request(self: @ContractState, request_id: felt252) -> requestMetadata {
             self.requests.read(request_id)
-        }
-
-        fn transfer_ownership(ref self: ContractState, new_owner: ContractAddress) {
-            self.ownable.transfer_ownership(new_owner);
         }
 
         fn issue_request(
