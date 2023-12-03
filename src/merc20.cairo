@@ -46,9 +46,13 @@ mod ERC20 {
     }
 
     #[external(v0)]
-    impl MERC20Impl of super::IERC20<ContractState> {
-        fn mint(self: @ContractState, recipient: ContractAddress, amount:u256){
-            self.erc20._mint(recipient, amount);
-        }
+    fn mint(
+        ref self: ContractState,
+        recipient: ContractAddress,
+        amount: u256
+    ) {
+        // This function is NOT protected which means
+        // ANYONE can mint tokens
+        self.erc20._mint(recipient, amount);
     }
 }
