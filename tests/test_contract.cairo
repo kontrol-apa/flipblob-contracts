@@ -124,11 +124,12 @@ mod tests {
         ref flip_safe_dispatcher: IFlipSafeDispatcher,
         flip_contract_address: @ContractAddress,
         erc20_contract_address: @ContractAddress,
-        max_bet_amount: u256,
+        max_bet_amount: u128,
+        min_bet_amount: u128,
         token_name: felt252
     ) {
         start_prank(*flip_contract_address, common::admin()); // MOCK ADMIN TO ADD COIN SUPPORT
-        flip_safe_dispatcher.set_token_support(token_name, *erc20_contract_address, max_bet_amount);
+        flip_safe_dispatcher.set_token_support(token_name, *erc20_contract_address, max_bet_amount, min_bet_amount);
         stop_prank(*flip_contract_address);
 
         let is_supported: bool = flip_safe_dispatcher.is_token_supported(token_name).unwrap();
@@ -227,11 +228,13 @@ mod tests {
         };
 
         let max_bet_amount_meth: u256 = 100000000000000000;
+        let min_bet_amount_meth: u256 = 1000000000000000;
         set_token_support(
             ref flip_safe_dispatcher,
             @flip_contract_address,
             @meth_contract_address,
             max_bet_amount_meth,
+            min_bet_amount_meth,
             'METH'
         );
 
@@ -313,12 +316,15 @@ mod tests {
         };
         let max_bet_amount_meth = 100000000000000000;
         let max_bet_amount_usdc = 100000000000000000000;
+        let min_bet_amount_meth: u256 = 1000000000000000;
+        let min_bet_amount_usdc: u256 = 1000000000000000;
 
         set_token_support(
             ref flip_safe_dispatcher,
             @flip_contract_address,
             @meth_contract_address,
             max_bet_amount_meth,
+            min_bet_amount_meth,
             'METH'
         );
         set_token_support(
@@ -326,6 +332,7 @@ mod tests {
             @flip_contract_address,
             @usdc_contract_address,
             max_bet_amount_usdc,
+            min_bet_amount_usdc,
             'USDC'
         );
 
@@ -463,11 +470,14 @@ mod tests {
         };
         let max_bet_amount_meth = 100000000000000000;
         let max_bet_amount_usdc = 100000000000000000000;
+        let min_bet_amount_meth = 1000000000000000;
+        let min_bet_amount_usdc = 1000000000000000000;
         set_token_support(
             ref flip_safe_dispatcher,
             @flip_contract_address,
             @meth_contract_address,
             max_bet_amount_meth,
+            min_bet_amount_meth,
             'METH'
         );
         set_token_support(
@@ -475,6 +485,7 @@ mod tests {
             @flip_contract_address,
             @usdc_contract_address,
             max_bet_amount_usdc,
+            min_bet_amount_usdc,
             'USDC'
         );
 
@@ -588,11 +599,14 @@ mod tests {
         };
         let max_bet_amount_meth = 100000000000000000;
         let max_bet_amount_usdc = 10000000000000000000;
+        let min_bet_amount_meth = 1000000000000000;
+        let min_bet_amount_usdc = 100000000000000000;
         set_token_support(
             ref flip_safe_dispatcher,
             @flip_contract_address,
             @meth_contract_address,
             max_bet_amount_meth,
+            min_bet_amount_meth,
             'METH'
         );
         set_token_support(
@@ -600,6 +614,7 @@ mod tests {
             @flip_contract_address,
             @usdc_contract_address,
             max_bet_amount_usdc,
+            min_bet_amount_usdc,
             'USDC'
         );
 
@@ -710,11 +725,14 @@ mod tests {
         };
         let max_bet_amount_meth = 100000000000000000;
         let max_bet_amount_usdc = 10000000000000000000;
+        let min_bet_amount_meth = 1000000000000000;
+        let min_bet_amount_usdc = 100000000000000000;
         set_token_support(
             ref flip_safe_dispatcher,
             @flip_contract_address,
             @meth_contract_address,
             max_bet_amount_meth,
+            min_bet_amount_meth,
             'METH'
         );
         set_token_support(
@@ -722,6 +740,7 @@ mod tests {
             @flip_contract_address,
             @usdc_contract_address,
             max_bet_amount_usdc,
+            min_bet_amount_usdc,
             'USDC'
         );
 
@@ -744,7 +763,7 @@ mod tests {
         );
 
         start_prank(flip_contract_address, common::badguy()); // MOCK ADMIN TO ADD COIN SUPPORT
-        match flip_safe_dispatcher.set_token_support('SOL', meth_contract_address, 100) {
+        match flip_safe_dispatcher.set_token_support('SOL', meth_contract_address, 100, 10) {
             Result::Ok(_) => panic_with_felt252('Should\'ve Panicked'),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
