@@ -227,8 +227,8 @@ mod tests {
             contract_address: meth_contract_address
         };
 
-        let max_bet_amount_meth: u256 = 100000000000000000;
-        let min_bet_amount_meth: u256 = 1000000000000000;
+        let max_bet_amount_meth: u128 = 100000000000000000;
+        let min_bet_amount_meth: u128 = 1000000000000000;
         set_token_support(
             ref flip_safe_dispatcher,
             @flip_contract_address,
@@ -316,8 +316,8 @@ mod tests {
         };
         let max_bet_amount_meth = 100000000000000000;
         let max_bet_amount_usdc = 100000000000000000000;
-        let min_bet_amount_meth: u256 = 1000000000000000;
-        let min_bet_amount_usdc: u256 = 1000000000000000;
+        let min_bet_amount_meth: u128 = 1000000000000000;
+        let min_bet_amount_usdc: u128 = 1000000000000000;
 
         set_token_support(
             ref flip_safe_dispatcher,
@@ -639,7 +639,7 @@ mod tests {
         let mut bet = max_bet_amount_meth;
         let mut times = 1;
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'METH') {
+        match flip_safe_dispatcher.issue_request(times, bet.into(), super::HEAD, 'METH') {
             Result::Ok(_) => panic_with_felt252('Should\'ve Panicked'),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
@@ -656,7 +656,7 @@ mod tests {
 
         let mut bet = max_bet_amount_usdc;
         let mut times = 10;
-         match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'USDC') {
+         match flip_safe_dispatcher.issue_request(times, bet.into(), super::HEAD, 'USDC') {
             Result::Ok(_) => panic_with_felt252('Should\'ve Panicked'),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
