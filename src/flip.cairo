@@ -7,7 +7,6 @@ use starknet::ContractAddress;
 trait IFlip<TContractState> {
     fn get_next_request_id(self: @TContractState) -> felt252;
     fn get_request(self: @TContractState, request_id: felt252) -> Flip::requestMetadata;
-    fn transfer_ownership(ref self: TContractState, new_owner: ContractAddress);
     fn issue_request(
         ref self: TContractState,
         times: u256,
@@ -17,7 +16,6 @@ trait IFlip<TContractState> {
     );
     fn finalize_request(ref self: TContractState, requestId: felt252, rng: u256);
     fn get_request_status(self: @TContractState, request_id: felt252) -> felt252;
-    fn owner(self: @TContractState) -> ContractAddress;
     fn set_flip_fee(ref self: TContractState, newFee: u256);
     fn get_flip_fee(self: @TContractState) -> u256;
     fn set_token_support(
@@ -40,20 +38,28 @@ trait IFlip<TContractState> {
 #[starknet::interface]
 trait ERC20<TContractState> {
     fn transferFrom(ref self: TContractState, sender: felt252, recipient: felt252, amount: u256);
-    fn balance_of(self: @TContractState, account: felt252) -> u256;
+    fn balanceOf(self: @TContractState, account: felt252) -> u256;
 }
 
 #[starknet::contract]
 mod Flip {
     use starknet::ContractAddress;
-    use openzeppelin::access::ownable::Ownable;
-    use openzeppelin::access::ownable::Ownable::{InternalImpl, OwnableImpl};
+    use openzeppelin::access::ownable::OwnableComponent;
     use array::{Span, ArrayTrait, SpanTrait};
     use starknet::{get_caller_address, get_contract_address};
     use super::{ERC20Dispatcher, ERC20DispatcherTrait};
     use option::OptionTrait;
     use zeroable::Zeroable;
     use traits::Into;
+
+    component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
+
+    #[abi(embed_v0)]
+    impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
+    #[abi(embed_v0)]
+    impl OwnableCamelOnlyImpl =
+        OwnableComponent::OwnableCamelOnlyImpl<ContractState>;
+    impl InternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
     const MAX_BET_TIMES:u256 = 10;
     const LOSE:felt252 = 11;
@@ -66,7 +72,9 @@ mod Flip {
         supported_erc20: LegacyMap<felt252, tokenMetadata>,
         treasury_address: felt252,
         flip_fee: u256,
-        finalizer:ContractAddress
+        finalizer:ContractAddress,
+            #[substorage(v0)]
+            ownable: OwnableComponent::Storage
     }
 
     #[derive(Copy, Drop, Serde, starknet::Store)]
@@ -89,8 +97,9 @@ mod Flip {
     #[derive(Drop, starknet::Event)]
     enum Event {
         RequestIssued: RequestIssued,
-        RequestFinalized: RequestFinalized
-    }
+        RequestFinalized: RequestFinalized,
+        #[flat]
+        OwnableEvent: OwnableComponent::Event    }
 
     #[derive(Drop, starknet::Event)]
     struct RequestIssued {
@@ -117,8 +126,7 @@ mod Flip {
         // owner address
         let owner: ContractAddress = starknet::contract_address_try_from_felt252(owner_address)
             .unwrap();
-        let mut unsafe_state = Ownable::unsafe_new_contract_state();
-        InternalImpl::initializer(ref unsafe_state, owner); // set the caller as owner
+        self.ownable.initializer(owner); // set the caller as owner
         self
             .next_request_id
             .write(
@@ -148,11 +156,6 @@ mod Flip {
 
     #[external(v0)]
     impl FlipImpl of super::IFlip<ContractState> {
-        fn owner(self: @ContractState) -> ContractAddress {
-            let unsafe_state = Ownable::unsafe_new_contract_state();
-            OwnableImpl::owner(@unsafe_state)
-        }
-
         fn get_next_request_id(self: @ContractState) -> felt252 {
             self.next_request_id.read()
         }
@@ -161,11 +164,6 @@ mod Flip {
         }
         fn get_request(self: @ContractState, request_id: felt252) -> requestMetadata {
             self.requests.read(request_id)
-        }
-
-        fn transfer_ownership(ref self: ContractState, new_owner: ContractAddress) {
-            let mut unsafe_state = Ownable::unsafe_new_contract_state();
-            Ownable::OwnableImpl::transfer_ownership(ref unsafe_state, new_owner);
         }
 
         fn issue_request(
@@ -187,7 +185,7 @@ mod Flip {
                     let treasuryBalance = ERC20Dispatcher {
                         contract_address: token_metadata.tokenAddress
                     }
-                        .balance_of(self.treasury_address.read());
+                        .balanceOf(self.treasury_address.read());
 
                     assert(treasuryBalance >= wager_amount * times, 'Treasury cant accept the bet');
 
@@ -278,8 +276,7 @@ mod Flip {
         }
 
         fn set_flip_fee(ref self: ContractState, newFee: u256) {
-            let ownable = Ownable::unsafe_new_contract_state();
-            InternalImpl::assert_only_owner(@ownable);
+            self.ownable.assert_only_owner();
             assert(newFee <= 100, 'Fee cant be higher than 100');
             self.flip_fee.write(newFee);
         }
@@ -295,22 +292,19 @@ mod Flip {
             maxBetable: u128,
             minBetable: u128,
         ) {
-            let ownable = Ownable::unsafe_new_contract_state();
-            InternalImpl::assert_only_owner(@ownable);
+            self.ownable.assert_only_owner();
             self.supported_erc20.write(tokenName, tokenMetadata { tokenAddress, maxBetable, minBetable });
         }
 
         fn set_max_bet(ref self: ContractState, tokenName: felt252, maxBetable: u128) {
-            let ownable = Ownable::unsafe_new_contract_state();
-            InternalImpl::assert_only_owner(@ownable);
+            self.ownable.assert_only_owner();
             let mut tokenMetadata = self.supported_erc20.read(tokenName);
             tokenMetadata.maxBetable = maxBetable;
             self.supported_erc20.write(tokenName, tokenMetadata);
         }
 
         fn set_min_bet(ref self: ContractState, tokenName: felt252, minBetable: u128) {
-            let ownable = Ownable::unsafe_new_contract_state();
-            InternalImpl::assert_only_owner(@ownable);
+            self.ownable.assert_only_owner();
             let mut tokenMetadata = self.supported_erc20.read(tokenName);
             tokenMetadata.minBetable = minBetable;
             self.supported_erc20.write(tokenName, tokenMetadata);
@@ -331,15 +325,13 @@ mod Flip {
 
 
         fn update_treasury(ref self: ContractState, treasuryAddress: felt252) {
-            let ownable = Ownable::unsafe_new_contract_state();
-            InternalImpl::assert_only_owner(@ownable);
+            self.ownable.assert_only_owner();
             assert(treasuryAddress.is_non_zero(), 'Cant use 0 address');
             self.treasury_address.write(treasuryAddress);
         }
 
         fn set_finalizer(ref self: ContractState, finalizer: ContractAddress) {
-            let ownable = Ownable::unsafe_new_contract_state();
-            InternalImpl::assert_only_owner(@ownable);
+            self.ownable.assert_only_owner();
             self.finalizer.write(finalizer);
         }
 

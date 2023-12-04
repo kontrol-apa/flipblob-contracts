@@ -1,13 +1,20 @@
 
-import { Contract, Account, constants, RpcProvider } from 'starknet';
+import { Contract, Account, constants, RpcProvider, num } from 'starknet';
 import { shortString } from 'starknet';
 import fs from 'fs';
 import { cairo } from "starknet";
 
 const tokenWETHAddress = '0x034e31357d1c3693bda06d04bf4c51557514ECed5A8e9973bDb772f7fB978B36'
-const flipTestAddress = "0x02b1512db3cc59de4e13f7f9900ac399303c707c9969be4f8458b1b5bde63ee9";
 const tokenWETHIdentifier = "WETH";
+
+const tokenGoerliETHAddress = '0x049D36570D4e46f48e99674bd3fcc84644DdD6b96F7C741B1562B82f9e004dC7';
+const tokenGoerliETHIdentifier = 'ETH';
+const tokenETHMaxBettable = "23000000000000000"
+const tokenETHMinBettable = "930000000000000"
+
+const flipTestAddress = "0x02b1512db3cc59de4e13f7f9900ac399303c707c9969be4f8458b1b5bde63ee9";
 const finalizer = '0x551e361b1f456856968d00e2ea991daecc04eed605903030ffbc547616da258'
+const treasuryAddress = "0x31c66f44d8455e5cac18b7016476685af8bd78bf4128cb5375ff2c45bc137c2";
 
 
 const { privateKey, accountAddress, provider } = getConfig("TESTNET");
@@ -27,27 +34,62 @@ const { abi: testWethAbi } = await provider.getClassAt(tokenWETHAddress);
 if (testAbi === undefined) { throw new Error("no abi.") };
 const wethTestContract = new Contract(testWethAbi, tokenWETHAddress, provider);
 
+
+
+const ETHproxyAddress = tokenGoerliETHAddress; // address of ETH proxy
+const compiledProxy = await provider.getClassAt(ETHproxyAddress); // abi of proxy
+const proxyContract = new Contract(compiledProxy.abi, ETHproxyAddress, provider);
+const { address: implementationAddress } = await proxyContract.implementation();
+// specific to this proxy : Implementation() returns an address of implementation.
+// Other proxies returns generaly a class hash of implementation
+console.log("implementation ERC20 Address =", num.toHex(implementationAddress));
+const classHashERC20Class = await provider.getClassHashAt(num.toHex(implementationAddress)); // read the class hash related to this contract address.
+console.log("classHash of ERC20 =", classHashERC20Class);
+const compiledERC20 = await provider.getClassByHash(classHashERC20Class); // final objective : the answer contains the abi of the ERC20.
+
+const ethContract = new Contract(compiledERC20.abi, ETHproxyAddress, provider);
+
 wethTestContract.connect(account);
 flipTestContract.connect(account);
+ethContract.connect(account);
 
 // Interaction with the contract with call
 var reqId = await flipTestContract.get_next_request_id();
-console.log("Initial balance =", reqId.toString()); 
+console.log("Next Request ID =", reqId.toString()); 
 // With Cairo 1 contract, the result value is in bal1, as bigint.
 
 
-const resApprove = await wethTestContract.approve(flipTestAddress, cairo.uint256(77000000000000000000));
+// const resApprove = await wethTestContract.approve(flipTestAddress, cairo.uint256(970000000000000000000));
 // await provider.waitForTransaction(resApprove.transaction_hash);
+// const allowance = await wethTestContract.allowance(accountAddress, flipTestAddress);
+// console.log("Allowance =", allowance.toString()); 
 
-const allowance = await wethTestContract.allowance(accountAddress, flipTestAddress);
-console.log("Allowance =", allowance.toString()); 
+const EthResApprove = await ethContract.approve(flipTestAddress, cairo.uint256(97000000000000000000000000));
+await provider.waitForTransaction(EthResApprove.transaction_hash);
+const ethAllowance = await ethContract.allowance(accountAddress, flipTestAddress);
+console.log("Allowance =", ethAllowance); 
 
-const setFinalizerTx = await flipTestContract.set_finalizer(finalizer);
-await provider.waitForTransaction(setFinalizerTx.transaction_hash);
+// const setFinalizerTx = await flipTestContract.set_finalizer(finalizer);
+// await provider.waitForTransaction(setFinalizerTx.transaction_hash);
 
-const res = await flipTestContract.issue_request(cairo.uint256(5), cairo.uint256(77000000000000000), 0, shortString.encodeShortString(tokenWETHIdentifier));
-const issueReqRes = await provider.waitForTransaction(res.transaction_hash);
-console.log('Status:', issueReqRes.execution_status);
+// const tokenSupportTx = await flipTestContract.set_token_support(shortString.encodeShortString(tokenGoerliETHIdentifier), tokenGoerliETHAddress, tokenETHMaxBettable, tokenETHMinBettable);
+// const tokenSupportReceipt = await provider.waitForTransaction(tokenSupportTx.transaction_hash);
+// console.log('Status:', tokenSupportReceipt.execution_status);
+
+// let res = await flipTestContract.issue_request(cairo.uint256(1), cairo.uint256(1000000000000000), "1", shortString.encodeShortString(tokenWETHIdentifier));
+// let issueReqRes = await provider.waitForTransaction(res.transaction_hash);
+// console.log('Status WETH:', issueReqRes.execution_status);
+
+const isSupported = await flipTestContract.is_token_supported(shortString.encodeShortString(tokenGoerliETHIdentifier));
+console.log(`Is ${tokenGoerliETHIdentifier} supported? = ${isSupported}`);
+
+// const tf = await ethContract.transfer(treasuryAddress, cairo.uint256(940000000000000));
+// const tf_req = await provider.waitForTransaction(tf.transaction_hash);
+// console.log('Status ETH Tx:', tf_req.execution_status);
+
+let res = await flipTestContract.issue_request(cairo.uint256(1), cairo.uint256(940000000000000), "0", shortString.encodeShortString(tokenGoerliETHIdentifier));
+let issueReqRes = await provider.waitForTransaction(res.transaction_hash);
+console.log('Status Issue Request with ETH:', issueReqRes.execution_status);
 
 reqId = await flipTestContract.get_next_request_id();
 console.log("Initial balance =", reqId.toString()); 
@@ -66,7 +108,8 @@ function getConfig(network) {
             // Assign values based on the specified network
             privateKey = config[network].STARKNET_PRIVATE_KEY;
             accountAddress = config[network].STARKNET_ACCOUNT_ADDRESS;
-            provider = new RpcProvider({ nodeUrl: config[network].INFURA_KEY });
+            // provider = new RpcProvider({ nodeUrl: config[network].INFURA_KEY });
+            provider = new RpcProvider({ sequencer: { network: constants.NetworkName.SN_GOERLI } });
         } catch (error) {
             console.error('Error reading config file:', error);
             process.exit(1);
