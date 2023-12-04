@@ -4,3 +4,4 @@ __pycache__
 *.png
 /deploy_scripts/node_modules
 /deploy_scripts/config.json
+.snfoundry_cache
