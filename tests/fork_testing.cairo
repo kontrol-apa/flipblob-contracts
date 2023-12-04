@@ -16,7 +16,7 @@ mod fork_test {
     use flipblob::flip::IFlipSafeDispatcherTrait;
     use openzeppelin::token::erc20::interface::{IERC20CamelOnlyDispatcher, IERC20CamelOnlyDispatcherTrait};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use flipblob::common;
+    use flipblob::common_fork;
     use snforge_std::{declare, ContractClassTrait, start_prank, stop_prank, PrintTrait};
     use starknet::contract_address_const;
 
@@ -53,11 +53,11 @@ mod fork_test {
         let flipFeeLow = flipFee.low.into();
         let flipFeeHigh = flipFee.high.into();
 
-        calldata.append(starknet::contract_address_to_felt252(common::treasury()));
-        calldata.append(starknet::contract_address_to_felt252(common::admin()));
+        calldata.append(starknet::contract_address_to_felt252(common_fork::treasury()));
+        calldata.append(starknet::contract_address_to_felt252(common_fork::admin()));
         calldata.append(flipFeeLow);
         calldata.append(flipFeeHigh);
-        calldata.append(starknet::contract_address_to_felt252(common::finalizer()));
+        calldata.append(starknet::contract_address_to_felt252(common_fork::finalizer()));
 
         let flip_contract_address = deploy_contract('Flip', calldata);
 
@@ -72,7 +72,7 @@ mod fork_test {
         min_bet_amount: u128,
         token_name: felt252
     ) {
-        start_prank(*flip_contract_address, common::admin()); // MOCK ADMIN TO ADD COIN SUPPORT
+        start_prank(*flip_contract_address, common_fork::admin()); // MOCK ADMIN TO ADD COIN SUPPORT
         flip_safe_dispatcher
             .set_token_support(token_name, *erc20_contract_address, max_bet_amount, min_bet_amount);
         stop_prank(*flip_contract_address);
@@ -109,12 +109,13 @@ mod fork_test {
         erc20_contract_address: @ContractAddress,
         amount: u256
     ) {
-        start_prank(*erc20_contract_address, common::user()); // MOCK USER TO FLIP
+        
+        start_prank(*erc20_contract_address, common_fork::user()); // MOCK USER TO FLIP
         erc20_safe_dispatcher.approve(*flip_contract_address, amount);
         stop_prank(*erc20_contract_address);
 
         start_prank(
-            *erc20_contract_address, common::treasury()
+            *erc20_contract_address, common_fork::treasury()
         ); // MOCK TREASURY TO APPROVE FLIP CONTRACT FOR SPENDING
         erc20_safe_dispatcher.approve(*flip_contract_address, amount);
         stop_prank(*erc20_contract_address);
@@ -173,9 +174,11 @@ mod fork_test {
         let eth_contract_address = contract_address_const::<
             0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
         >();
+        
+        
         let mut eth_camel_dispatcher = IERC20CamelOnlyDispatcher { contract_address: eth_contract_address };
         let mut eth_snake_dispatcher = IERC20Dispatcher { contract_address: eth_contract_address };
-        let max_bet_amount_meth: u128 = 100000000000000000;
+        let max_bet_amount_meth: u128 = 39000000000000000;
         let min_bet_amount_meth: u128 = 100000;
         set_token_support(
             ref flip_safe_dispatcher,
@@ -199,17 +202,29 @@ mod fork_test {
 
         let index = 0;
         let bet = min_bet_amount_meth + 10;
-        let pre_bet_balance = eth_camel_dispatcher.balanceOf(common::user());
-        start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        flip_safe_dispatcher.issue_request(1, bet.into(), super::HEAD, 'METH');
+        let pre_bet_balance = eth_camel_dispatcher.balanceOf(common_fork::user());
+        start_prank(flip_contract_address, common_fork::user()); // MOCK USER TO FLIP
+        match flip_safe_dispatcher.issue_request(1, bet.into(), super::HEAD, 'ETH') {
+            Result::Ok(_) => {
+               'OKAYY!'.print();
+                
+            },
+            Result::Err(panic_data) => {
+               panic_data.print();
+               'Shouldn Panic!'.print();
+            }
+        }
         stop_prank(flip_contract_address);
-        let pre_balance = eth_camel_dispatcher.balanceOf(common::user());
-        assert((pre_bet_balance - pre_balance) == (bet.into()), 'Balances dont match!');
+        let pre_balance = eth_camel_dispatcher.balanceOf(common_fork::user());
+        
+        pre_bet_balance.print();
+        pre_balance.print();
+        assert((pre_bet_balance - pre_balance) == (bet.into()), 'Balances1 dont match!');
 
         finalize_request(
             ref flip_safe_dispatcher,
             @flip_contract_address,
-            common::treasury(),
+            common_fork::treasury(),
             *request_ids.at(index),
             *random_numbers.at(index),
             'Only Finalizer'
@@ -218,13 +233,13 @@ mod fork_test {
         finalize_request(
             ref flip_safe_dispatcher,
             @flip_contract_address,
-            common::finalizer(),
+            common_fork::finalizer(),
             *request_ids.at(index),
             *random_numbers.at(index),
             'Success'
         );
 
-        let post_balance = eth_camel_dispatcher.balanceOf(common::user());
+        let post_balance = eth_camel_dispatcher.balanceOf(common_fork::user());
         let success_count = flip_safe_dispatcher
             .get_request_status(*request_ids.at(index))
             .unwrap()
@@ -239,8 +254,8 @@ mod fork_test {
             'Balances dont match!'
         );
 
-        start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        match flip_safe_dispatcher.issue_request(1, bet.into(), super::INVALID, 'METH') {
+        start_prank(flip_contract_address, common_fork::user()); // MOCK USER TO FLIP
+        match flip_safe_dispatcher.issue_request(1, bet.into(), super::INVALID, 'ETH') {
             Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
