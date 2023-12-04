@@ -4,7 +4,7 @@ const INVALID: felt252 = 2;
 
 
 mod tests {
-    use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
+use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
     use result::ResultTrait;
     use option::{Option, OptionTrait};
     use traits::TryInto;
@@ -227,7 +227,7 @@ mod tests {
         };
 
         let max_bet_amount_meth: u128 = 100000000000000000;
-        let min_bet_amount_meth: u128 = 1000000000000000;
+        let min_bet_amount_meth: u128 = 100000;
         set_token_support(
             ref flip_safe_dispatcher,
             @flip_contract_address,
@@ -254,7 +254,6 @@ mod tests {
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
         flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'METH');
         stop_prank(flip_contract_address);
-
         let pre_balance = meth_safe_dispatcher.balance_of(common::user());
         assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
 
