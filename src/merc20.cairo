@@ -2,7 +2,31 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 trait IERC20<TContractState> {
-    fn mint(self: @TContractState, recipient: ContractAddress, amount:u256);
+    fn balance_of(self: @TContractState, account: starknet::ContractAddress) -> u256;
+    fn approve(ref self: TContractState, spender: ContractAddress, amount: u256) -> bool;
+    fn transfer_from(
+        ref self: TContractState,
+        sender: starknet::ContractAddress,
+        recipient: starknet::ContractAddress,
+        amount: u256
+    ) -> bool;
+
+    fn mint(self: @TContractState, recipient: ContractAddress, amount: u256);
+}
+
+#[starknet::interface]
+trait MockERC20ABI<TContractState> {
+    fn balance_of(self: @TContractState, account: starknet::ContractAddress) -> u256;
+    fn approve(ref self: TContractState, spender: ContractAddress, amount: u256) -> bool;
+
+    fn transfer_from(
+        ref self: TContractState,
+        sender: starknet::ContractAddress,
+        recipient: starknet::ContractAddress,
+        amount: u256
+    ) -> bool;
+
+    fn mint(self: @TContractState, recipient: ContractAddress, amount: u256);
 }
 
 #[starknet::contract]
@@ -46,11 +70,7 @@ mod ERC20 {
     }
 
     #[external(v0)]
-    fn mint(
-        ref self: ContractState,
-        recipient: ContractAddress,
-        amount: u256
-    ) {
+    fn mint(ref self: ContractState, recipient: ContractAddress, amount: u256) {
         // This function is NOT protected which means
         // ANYONE can mint tokens
         self.erc20._mint(recipient, amount);

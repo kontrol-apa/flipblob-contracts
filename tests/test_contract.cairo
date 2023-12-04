@@ -14,8 +14,7 @@ mod tests {
     use clone::Clone;
     use flipblob::flip::IFlipSafeDispatcher;
     use flipblob::flip::IFlipSafeDispatcherTrait;
-    use openzeppelin::token::erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
-
+    use flipblob::merc20::{ MockERC20ABIDispatcher, MockERC20ABIDispatcherTrait};
     use starknet::get_caller_address;
     use flipblob::common;
     use snforge_std::{declare, ContractClassTrait, start_prank, stop_prank, PrintTrait};
@@ -71,7 +70,7 @@ mod tests {
         calldata.append(starknet::contract_address_to_felt252(common::treasury()));
 
         let meth_contract_address = deploy_contract('ERC20', calldata);
-        let meth_safe_dispatcher = ERC20ABIDispatcher { contract_address: meth_contract_address };
+        let meth_safe_dispatcher = MockERC20ABIDispatcher { contract_address: meth_contract_address };
         let balance_of_treasury = meth_safe_dispatcher.balance_of(common::treasury());
         assert(balance_of_treasury == initialSupply, 'Balances dont match!');
 
@@ -113,7 +112,7 @@ mod tests {
         calldatas.append(calldata);
 
         let addresses: Array<ContractAddress> = deploy_multiple_contracts('ERC20', calldatas);
-        let usdc_safe_dispatcher = ERC20ABIDispatcher { contract_address: *addresses.at(0) };
+        let usdc_safe_dispatcher = MockERC20ABIDispatcher { contract_address: *addresses.at(0) };
         let balance_of_treasury = usdc_safe_dispatcher.balance_of(common::treasury());
         assert(balance_of_treasury == initialSupply, 'Balances dont match!');
 
@@ -159,7 +158,7 @@ mod tests {
     }
 
     fn approve_and_mint(
-        ref erc20_safe_dispatcher: ERC20ABIDispatcher,
+        ref erc20_safe_dispatcher: MockERC20ABIDispatcher,
         flip_contract_address: @ContractAddress,
         erc20_contract_address: @ContractAddress,
         amount: u256
@@ -223,7 +222,7 @@ mod tests {
         let mut flip_safe_dispatcher = IFlipSafeDispatcher {
             contract_address: flip_contract_address
         };
-        let mut meth_safe_dispatcher = ERC20ABIDispatcher {
+        let mut meth_safe_dispatcher = MockERC20ABIDispatcher {
             contract_address: meth_contract_address
         };
 
@@ -308,10 +307,10 @@ mod tests {
         let mut flip_safe_dispatcher = IFlipSafeDispatcher {
             contract_address: flip_contract_address
         };
-        let mut meth_safe_dispatcher = ERC20ABIDispatcher {
+        let mut meth_safe_dispatcher = MockERC20ABIDispatcher {
             contract_address: meth_contract_address
         };
-        let mut usdc_safe_dispatcher = ERC20ABIDispatcher {
+        let mut usdc_safe_dispatcher = MockERC20ABIDispatcher {
             contract_address: usdc_contract_address
         };
         let max_bet_amount_meth = 100000000000000000;
@@ -462,10 +461,10 @@ mod tests {
         let mut flip_safe_dispatcher = IFlipSafeDispatcher {
             contract_address: flip_contract_address
         };
-        let mut meth_safe_dispatcher = ERC20ABIDispatcher {
+        let mut meth_safe_dispatcher = MockERC20ABIDispatcher {
             contract_address: meth_contract_address
         };
-        let mut usdc_safe_dispatcher = ERC20ABIDispatcher {
+        let mut usdc_safe_dispatcher = MockERC20ABIDispatcher {
             contract_address: usdc_contract_address
         };
         let max_bet_amount_meth = 100000000000000000;
@@ -591,10 +590,10 @@ mod tests {
         let mut flip_safe_dispatcher = IFlipSafeDispatcher {
             contract_address: flip_contract_address
         };
-        let mut meth_safe_dispatcher = ERC20ABIDispatcher {
+        let mut meth_safe_dispatcher = MockERC20ABIDispatcher {
             contract_address: meth_contract_address
         };
-        let mut usdc_safe_dispatcher = ERC20ABIDispatcher {
+        let mut usdc_safe_dispatcher = MockERC20ABIDispatcher {
             contract_address: usdc_contract_address
         };
         let max_bet_amount_meth = 100000000000000000;
@@ -717,10 +716,10 @@ mod tests {
         let mut flip_safe_dispatcher = IFlipSafeDispatcher {
             contract_address: flip_contract_address
         };
-        let mut meth_safe_dispatcher = ERC20ABIDispatcher {
+        let mut meth_safe_dispatcher = MockERC20ABIDispatcher {
             contract_address: meth_contract_address
         };
-        let mut usdc_safe_dispatcher = ERC20ABIDispatcher {
+        let mut usdc_safe_dispatcher = MockERC20ABIDispatcher {
             contract_address: usdc_contract_address
         };
         let max_bet_amount_meth = 100000000000000000;
