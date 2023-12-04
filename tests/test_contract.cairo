@@ -4,7 +4,7 @@ const INVALID: felt252 = 2;
 
 
 mod tests {
-use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
+    use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
     use result::ResultTrait;
     use option::{Option, OptionTrait};
     use traits::TryInto;
@@ -14,13 +14,17 @@ use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
     use clone::Clone;
     use flipblob::flip::IFlipSafeDispatcher;
     use flipblob::flip::IFlipSafeDispatcherTrait;
-    use flipblob::merc20::{ MockERC20ABIDispatcher, MockERC20ABIDispatcherTrait};
+    use flipblob::merc20::{MockERC20ABIDispatcher, MockERC20ABIDispatcherTrait};
     use starknet::get_caller_address;
     use flipblob::common;
     use snforge_std::{declare, ContractClassTrait, start_prank, stop_prank, PrintTrait};
 
     const MAX_BET_AMOUNT: u256 = 10;
-
+    fn do_a_panic(msg: felt252) {
+        let mut arr = ArrayTrait::new();
+        arr.append(msg);
+        panic(arr);
+    }
     fn deploy_contract(name: felt252, arguments: Array<felt252>) -> ContractAddress {
         let contract = declare(name);
         contract.deploy(@arguments).unwrap()
@@ -37,9 +41,7 @@ use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
                 Option::Some(calldata) => {
                     erc20_addresses.append(contract.deploy(@calldata).unwrap());
                 },
-                Option::None(_) => {
-                    break erc20_addresses.clone();
-                }
+                Option::None(_) => { break erc20_addresses.clone(); }
             };
         }
     }
@@ -70,7 +72,9 @@ use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
         calldata.append(starknet::contract_address_to_felt252(common::treasury()));
 
         let meth_contract_address = deploy_contract('ERC20', calldata);
-        let meth_safe_dispatcher = MockERC20ABIDispatcher { contract_address: meth_contract_address };
+        let meth_safe_dispatcher = MockERC20ABIDispatcher {
+            contract_address: meth_contract_address
+        };
         let balance_of_treasury = meth_safe_dispatcher.balance_of(common::treasury());
         assert(balance_of_treasury == initialSupply, 'Balances dont match!');
 
@@ -128,7 +132,8 @@ use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
         token_name: felt252
     ) {
         start_prank(*flip_contract_address, common::admin()); // MOCK ADMIN TO ADD COIN SUPPORT
-        flip_safe_dispatcher.set_token_support(token_name, *erc20_contract_address, max_bet_amount, min_bet_amount);
+        flip_safe_dispatcher
+            .set_token_support(token_name, *erc20_contract_address, max_bet_amount, min_bet_amount);
         stop_prank(*flip_contract_address);
 
         let is_supported: bool = flip_safe_dispatcher.is_token_supported(token_name).unwrap();
@@ -189,7 +194,7 @@ use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
     fn finalize_request(
         ref flip_safe_dispatcher: IFlipSafeDispatcher,
         flip_contract_address: @ContractAddress,
-        finalizer:ContractAddress,
+        finalizer: ContractAddress,
         requestId: felt252,
         randomNumber: u256,
         error_message: felt252
@@ -284,7 +289,9 @@ use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
 
         assert(
             (post_balance
-                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet.into(), success_count),
+                - pre_balance) == calculate_payout(
+                    ref flip_safe_dispatcher, bet.into(), success_count
+                ),
             'Balances dont match!'
         );
 
@@ -380,7 +387,9 @@ use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
         let post_balance = meth_safe_dispatcher.balance_of(common::user());
         assert(
             (post_balance
-                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet.into(), success_count),
+                - pre_balance) == calculate_payout(
+                    ref flip_safe_dispatcher, bet.into(), success_count
+                ),
             'Balances dont match!'
         );
 
@@ -411,7 +420,9 @@ use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
         let post_balance = usdc_safe_dispatcher.balance_of(common::user());
         assert(
             (post_balance
-                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet.into(), success_count),
+                - pre_balance) == calculate_payout(
+                    ref flip_safe_dispatcher, bet.into(), success_count
+                ),
             'Balances dont match!'
         );
 
@@ -426,9 +437,7 @@ use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
 
         match flip_safe_dispatcher.issue_request(1, bet.into(), super::HEAD, 'USDC') {
             Result::Ok(_) => 'Passed.'.print(),
-            Result::Err(panic_data) => {
-                (*panic_data.at(0)).print();
-            }
+            Result::Err(panic_data) => { do_a_panic(*panic_data.at(0)); }
         }
         stop_prank(flip_contract_address);
 
@@ -512,7 +521,9 @@ use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
         stop_prank(flip_contract_address);
 
         let mut pre_balance = meth_safe_dispatcher.balance_of(common::user());
-        assert((pre_bet_balance - pre_balance) == (bet.into() * times), 'Issue Balances dont match!');
+        assert(
+            (pre_bet_balance - pre_balance) == (bet.into() * times), 'Issue Balances dont match!'
+        );
 
         finalize_request(
             ref flip_safe_dispatcher,
@@ -532,7 +543,9 @@ use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
         let mut post_balance = meth_safe_dispatcher.balance_of(common::user());
         assert(
             (post_balance
-                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet.into(), success_count),
+                - pre_balance) == calculate_payout(
+                    ref flip_safe_dispatcher, bet.into(), success_count
+                ),
             'Balances dont match!'
         );
 
@@ -545,7 +558,9 @@ use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
         stop_prank(flip_contract_address);
 
         pre_balance = usdc_safe_dispatcher.balance_of(common::user());
-        assert((pre_bet_balance - pre_balance) == (bet.into() * times), 'Issue Balances dont match!');
+        assert(
+            (pre_bet_balance - pre_balance) == (bet.into() * times), 'Issue Balances dont match!'
+        );
 
         finalize_request(
             ref flip_safe_dispatcher,
@@ -564,7 +579,9 @@ use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
         post_balance = usdc_safe_dispatcher.balance_of(common::user());
         assert(
             (post_balance
-                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet.into(), success_count),
+                - pre_balance) == calculate_payout(
+                    ref flip_safe_dispatcher, bet.into(), success_count
+                ),
             'Balances dont match!'
         );
 
@@ -649,10 +666,9 @@ use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
         assert(success_count == 0, 'TX musn`t not be finalized!');
         assert(flip_safe_dispatcher.get_next_request_id().unwrap() == 1, 'No TX has been made');
 
-
         let mut bet = max_bet_amount_usdc + 1;
         let mut times = 10;
-         match flip_safe_dispatcher.issue_request(times, bet.into(), super::HEAD, 'USDC') {
+        match flip_safe_dispatcher.issue_request(times, bet.into(), super::HEAD, 'USDC') {
             Result::Ok(_) => panic_with_felt252('Should\'ve Panicked'),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
@@ -666,16 +682,16 @@ use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
         assert(success_count == 0, 'TX musn`t be finalized!');
         assert(flip_safe_dispatcher.get_next_request_id().unwrap() == 1, 'No TX has been made');
 
-        
         let mut bet = min_bet_amount_usdc + 1;
         let mut times = 10;
-         match flip_safe_dispatcher.issue_request(times, bet.into(), super::HEAD, 'USDC') {
+        match flip_safe_dispatcher.issue_request(times, bet.into(), super::HEAD, 'USDC') {
             Result::Ok(_) => 'Done'.print(),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
+                do_a_panic(*panic_data.at(0));
             }
         }
-        
+
         assert(flip_safe_dispatcher.get_next_request_id().unwrap() == 2, 'A TX has been made');
         stop_prank(flip_contract_address);
 
@@ -811,8 +827,6 @@ use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
         );
 
         stop_prank(flip_contract_address);
-
-        
     }
 }
 
