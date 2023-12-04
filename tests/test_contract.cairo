@@ -4,7 +4,7 @@ const INVALID: felt252 = 2;
 
 
 mod tests {
-    use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
+use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
     use result::ResultTrait;
     use option::{Option, OptionTrait};
     use traits::TryInto;
@@ -227,7 +227,7 @@ mod tests {
         };
 
         let max_bet_amount_meth: u128 = 100000000000000000;
-        let min_bet_amount_meth: u128 = 1000000000000000;
+        let min_bet_amount_meth: u128 = 100000;
         set_token_support(
             ref flip_safe_dispatcher,
             @flip_contract_address,
@@ -249,14 +249,13 @@ mod tests {
         );
 
         let index = 0;
-        let bet = 1000000;
+        let bet = min_bet_amount_meth + 10;
         let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user());
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'METH');
+        flip_safe_dispatcher.issue_request(1, bet.into(), super::HEAD, 'METH');
         stop_prank(flip_contract_address);
-
         let pre_balance = meth_safe_dispatcher.balance_of(common::user());
-        assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
+        assert((pre_bet_balance - pre_balance) == (bet.into()), 'Balances dont match!');
 
         finalize_request(
             ref flip_safe_dispatcher,
@@ -285,12 +284,12 @@ mod tests {
 
         assert(
             (post_balance
-                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
+                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet.into(), success_count),
             'Balances dont match!'
         );
 
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        match flip_safe_dispatcher.issue_request(1, bet, super::INVALID, 'METH') {
+        match flip_safe_dispatcher.issue_request(1, bet.into(), super::INVALID, 'METH') {
             Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
@@ -315,8 +314,8 @@ mod tests {
         };
         let max_bet_amount_meth = 100000000000000000;
         let max_bet_amount_usdc = 100000000000000000000;
-        let min_bet_amount_meth: u128 = 1000000000000000;
-        let min_bet_amount_usdc: u128 = 1000000000000000;
+        let min_bet_amount_meth: u128 = 1000000;
+        let min_bet_amount_usdc: u128 = 1000000;
 
         set_token_support(
             ref flip_safe_dispatcher,
@@ -354,14 +353,14 @@ mod tests {
         );
 
         let mut index = 0;
-        let mut bet = 1000000;
+        let mut bet = min_bet_amount_meth + 10;
         let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user());
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'METH');
+        flip_safe_dispatcher.issue_request(1, bet.into(), super::HEAD, 'METH');
         stop_prank(flip_contract_address);
 
         let pre_balance = meth_safe_dispatcher.balance_of(common::user());
-        assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
+        assert((pre_bet_balance - pre_balance) == (bet.into()), 'Balances dont match!');
 
         finalize_request(
             ref flip_safe_dispatcher,
@@ -381,19 +380,18 @@ mod tests {
         let post_balance = meth_safe_dispatcher.balance_of(common::user());
         assert(
             (post_balance
-                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
+                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet.into(), success_count),
             'Balances dont match!'
         );
 
         index = index + 1;
-        bet = 11000000;
         let pre_bet_balance = usdc_safe_dispatcher.balance_of(common::user());
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        flip_safe_dispatcher.issue_request(1, bet, super::TAIL, 'USDC');
+        flip_safe_dispatcher.issue_request(1, bet.into(), super::TAIL, 'USDC');
         stop_prank(flip_contract_address);
 
         let pre_balance = usdc_safe_dispatcher.balance_of(common::user());
-        assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
+        assert((pre_bet_balance - pre_balance) == (bet.into()), 'Balances dont match!');
 
         finalize_request(
             ref flip_safe_dispatcher,
@@ -413,13 +411,12 @@ mod tests {
         let post_balance = usdc_safe_dispatcher.balance_of(common::user());
         assert(
             (post_balance
-                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
+                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet.into(), success_count),
             'Balances dont match!'
         );
 
-        bet = 11000000;
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        match flip_safe_dispatcher.issue_request(1, bet, super::INVALID, 'METH') {
+        match flip_safe_dispatcher.issue_request(1, bet.into(), super::INVALID, 'METH') {
             Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
@@ -427,7 +424,7 @@ mod tests {
             }
         }
 
-        match flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'USDC') {
+        match flip_safe_dispatcher.issue_request(1, bet.into(), super::HEAD, 'USDC') {
             Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
@@ -507,15 +504,15 @@ mod tests {
         );
 
         let mut index = 0;
-        let mut bet = 10000000;
+        let mut bet = min_bet_amount_meth;
         let mut times = 10;
         let mut pre_bet_balance = meth_safe_dispatcher.balance_of(common::user());
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        flip_safe_dispatcher.issue_request(times, bet, super::TAIL, 'METH');
+        flip_safe_dispatcher.issue_request(times, bet.into(), super::TAIL, 'METH');
         stop_prank(flip_contract_address);
 
         let mut pre_balance = meth_safe_dispatcher.balance_of(common::user());
-        assert((pre_bet_balance - pre_balance) == (bet * times), 'Issue Balances dont match!');
+        assert((pre_bet_balance - pre_balance) == (bet.into() * times), 'Issue Balances dont match!');
 
         finalize_request(
             ref flip_safe_dispatcher,
@@ -535,20 +532,20 @@ mod tests {
         let mut post_balance = meth_safe_dispatcher.balance_of(common::user());
         assert(
             (post_balance
-                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
+                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet.into(), success_count),
             'Balances dont match!'
         );
 
-        bet = 555555;
+        bet = min_bet_amount_usdc;
         times = 3;
         index = index + 1;
         pre_bet_balance = usdc_safe_dispatcher.balance_of(common::user());
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'USDC');
+        flip_safe_dispatcher.issue_request(times, bet.into(), super::HEAD, 'USDC');
         stop_prank(flip_contract_address);
 
         pre_balance = usdc_safe_dispatcher.balance_of(common::user());
-        assert((pre_bet_balance - pre_balance) == (bet * times), 'Issue Balances dont match!');
+        assert((pre_bet_balance - pre_balance) == (bet.into() * times), 'Issue Balances dont match!');
 
         finalize_request(
             ref flip_safe_dispatcher,
@@ -567,13 +564,13 @@ mod tests {
         post_balance = usdc_safe_dispatcher.balance_of(common::user());
         assert(
             (post_balance
-                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet, success_count),
+                - pre_balance) == calculate_payout(ref flip_safe_dispatcher, bet.into(), success_count),
             'Balances dont match!'
         );
 
         times = 11;
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'METH') {
+        match flip_safe_dispatcher.issue_request(times, bet.into(), super::HEAD, 'METH') {
             Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
@@ -653,7 +650,7 @@ mod tests {
         assert(flip_safe_dispatcher.get_next_request_id().unwrap() == 1, 'No TX has been made');
 
 
-        let mut bet = max_bet_amount_usdc;
+        let mut bet = max_bet_amount_usdc + 1;
         let mut times = 10;
          match flip_safe_dispatcher.issue_request(times, bet.into(), super::HEAD, 'USDC') {
             Result::Ok(_) => panic_with_felt252('Should\'ve Panicked'),
@@ -670,9 +667,9 @@ mod tests {
         assert(flip_safe_dispatcher.get_next_request_id().unwrap() == 1, 'No TX has been made');
 
         
-        let mut bet = 0;
+        let mut bet = min_bet_amount_usdc + 1;
         let mut times = 10;
-         match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'USDC') {
+         match flip_safe_dispatcher.issue_request(times, bet.into(), super::HEAD, 'USDC') {
             Result::Ok(_) => 'Done'.print(),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
@@ -699,7 +696,7 @@ mod tests {
 
         let mut times = 11;
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        match flip_safe_dispatcher.issue_request(times, bet, super::HEAD, 'METH') {
+        match flip_safe_dispatcher.issue_request(times, bet.into(), super::HEAD, 'METH') {
             Result::Ok(_) => panic_with_felt252('Should\'ve Panicked'),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
@@ -796,13 +793,13 @@ mod tests {
         stop_prank(flip_contract_address);
 
         let index = 0;
-        let bet = 1000000;
+        let bet = min_bet_amount_meth + 10;
         let pre_bet_balance = meth_safe_dispatcher.balance_of(common::user());
         start_prank(flip_contract_address, common::user()); // MOCK USER TO FLIP
-        flip_safe_dispatcher.issue_request(1, bet, super::HEAD, 'METH');
+        flip_safe_dispatcher.issue_request(1, bet.into(), super::HEAD, 'METH');
 
         let pre_balance = meth_safe_dispatcher.balance_of(common::user());
-        assert((pre_bet_balance - pre_balance) == (bet), 'Balances dont match!');
+        assert((pre_bet_balance - pre_balance) == (bet.into()), 'Balances dont match!');
 
         finalize_request(
             ref flip_safe_dispatcher,
