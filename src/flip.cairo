@@ -27,7 +27,7 @@ trait IFlip<TContractState> {
     );
     fn is_token_supported(self: @TContractState, tokenName: felt252) -> bool;
     fn get_token_address(self: @TContractState, tokenName: felt252) -> ContractAddress;
-    fn update_treasury(ref self: TContractState, treasuryAddress: felt252);
+    fn update_treasury(ref self: TContractState, treasuryAddress: ContractAddress);
     fn set_max_bet(ref self: TContractState, tokenName: felt252, maxBetable: u128);
     fn set_min_bet(ref self: TContractState, tokenName: felt252, minBetable: u128);
     fn set_finalizer(ref self: TContractState, finalizer: ContractAddress);
@@ -47,7 +47,7 @@ mod Flip {
     use openzeppelin::access::ownable::OwnableComponent;
     use array::{Span, ArrayTrait, SpanTrait};
     use starknet::{get_caller_address, get_contract_address};
-    use super::{ERC20Dispatcher, ERC20DispatcherTrait};
+    use openzeppelin::token::erc20::interface::{IERC20CamelOnlyDispatcher, IERC20CamelOnlyDispatcherTrait};
     use option::OptionTrait;
     use zeroable::Zeroable;
     use traits::Into;
@@ -70,7 +70,7 @@ mod Flip {
         requests: LegacyMap<felt252, requestMetadata>,
         requestStatus: LegacyMap<felt252, felt252>,
         supported_erc20: LegacyMap<felt252, tokenMetadata>,
-        treasury_address: felt252,
+        treasury_address: ContractAddress,
         flip_fee: u256,
         finalizer:ContractAddress,
             #[substorage(v0)]
@@ -104,7 +104,7 @@ mod Flip {
     #[derive(Drop, starknet::Event)]
     struct RequestIssued {
         wager_amount: u256,
-        issuer: felt252,
+        issuer: ContractAddress,
         toss_prediction: felt252,
         times: u256,
         token: felt252,
@@ -121,7 +121,7 @@ mod Flip {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState, treasuryAddress: felt252, owner_address: felt252, flipFee: u256, finalizer:ContractAddress
+        ref self: ContractState, treasuryAddress: ContractAddress, owner_address: felt252, flipFee: u256, finalizer:ContractAddress
     ) {
         // owner address
         let owner: ContractAddress = starknet::contract_address_try_from_felt252(owner_address)
@@ -174,7 +174,6 @@ mod Flip {
             erc20_name: felt252
         ) {
             let caller: ContractAddress = get_caller_address();
-            let issuer = starknet::contract_address_to_felt252(caller);
             assert(((toss_result == 0) || (toss_result == 1)), 'Unsupported Coin Face.');
             assert((times > 0) && (times <= MAX_BET_TIMES), 'Invalid amount.');
             match self.get_token_support(erc20_name) {
@@ -182,15 +181,15 @@ mod Flip {
                     assert(token_metadata.maxBetable.into() > wager_amount, 'Wager too high');
                     assert(token_metadata.minBetable.into() <= wager_amount, 'Wager too low');
 
-                    let treasuryBalance = ERC20Dispatcher {
+                    let treasuryBalance = IERC20CamelOnlyDispatcher {
                         contract_address: token_metadata.tokenAddress
                     }
                         .balanceOf(self.treasury_address.read());
 
                     assert(treasuryBalance >= wager_amount * times, 'Treasury cant accept the bet');
 
-                    ERC20Dispatcher { contract_address: token_metadata.tokenAddress }
-                        .transferFrom(issuer, self.treasury_address.read(), wager_amount * times);
+                    IERC20CamelOnlyDispatcher { contract_address: token_metadata.tokenAddress }
+                        .transferFrom(caller, self.treasury_address.read(), wager_amount * times);
                     let current_request_id: felt252 = self.next_request_id.read();
                     self.next_request_id.write(current_request_id + 1); // increment
                     self
@@ -209,7 +208,7 @@ mod Flip {
                         .emit(
                             RequestIssued {
                                 wager_amount: wager_amount,
-                                issuer: issuer,
+                                issuer: caller,
                                 toss_prediction: toss_result,
                                 times: times,
                                 token: erc20_name,
@@ -230,7 +229,6 @@ mod Flip {
             let toss_result_prediction = request.chosen_coin_face;
             let erc20_name = request.token;
 
-            let user_address_felt252: felt252 = starknet::contract_address_to_felt252(user_address);
             let request_status = self.requestStatus.read(requestId);
 
             assert(self.is_finalizer() == true, 'Only Finalizer');
@@ -257,10 +255,10 @@ mod Flip {
                 profit = (wager_amount * (100 - self.flip_fee.read()) / 100) * success_count;
                 match self.get_token_support(erc20_name) {
                     Option::Some(token_metadata) => {
-                        ERC20Dispatcher { contract_address: token_metadata.tokenAddress }
+                        IERC20CamelOnlyDispatcher { contract_address: token_metadata.tokenAddress }
                             .transferFrom(
                                 self.treasury_address.read(),
-                                user_address_felt252,
+                                user_address,
                                 (wager_amount * success_count + profit)
                             );
                     },
@@ -324,7 +322,7 @@ mod Flip {
         }
 
 
-        fn update_treasury(ref self: ContractState, treasuryAddress: felt252) {
+        fn update_treasury(ref self: ContractState, treasuryAddress: ContractAddress) {
             self.ownable.assert_only_owner();
             assert(treasuryAddress.is_non_zero(), 'Cant use 0 address');
             self.treasury_address.write(treasuryAddress);
