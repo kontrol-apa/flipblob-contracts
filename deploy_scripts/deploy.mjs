@@ -72,7 +72,7 @@ console.log("Allowance =", ethAllowance);
 const isSupported = await flipTestContract.is_token_supported(shortString.encodeShortString(tokenETHIdentifier));
 console.log(`Is ${tokenETHIdentifier} supported? = ${isSupported}`);
 
-const res = await flipTestContract.issue_request(cairo.uint256(1), cairo.uint256(tokenETHMinBettable + 100000), "0", shortString.encodeShortString(tokenETHIdentifier));
+const res = await flipTestContract.issue_request(cairo.uint256(1), cairo.uint256(tokenETHMinBettable + 10), "0", shortString.encodeShortString(tokenETHIdentifier));
 const issueReqRes = await provider.waitForTransaction(res.transaction_hash);
 console.log('Status Issue Request with ETH:', issueReqRes.execution_status);
 
