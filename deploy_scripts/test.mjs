@@ -12,7 +12,7 @@ const tokenGoerliETHIdentifier = 'ETH';
 const tokenETHMaxBettable = "23000000000000000"
 const tokenETHMinBettable = "930000000000000"
 
-const flipTestAddress = "0x02b1512db3cc59de4e13f7f9900ac399303c707c9969be4f8458b1b5bde63ee9";
+const flipTestAddress = "0x19eb5a271d6f848a50235c033fb7fc59036997e3754ad67cad9b42b09970c68";
 const finalizer = '0x551e361b1f456856968d00e2ea991daecc04eed605903030ffbc547616da258'
 const treasuryAddress = "0x31c66f44d8455e5cac18b7016476685af8bd78bf4128cb5375ff2c45bc137c2";
 
@@ -69,30 +69,22 @@ await provider.waitForTransaction(EthResApprove.transaction_hash);
 const ethAllowance = await ethContract.allowance(accountAddress, flipTestAddress);
 console.log("Allowance =", ethAllowance); 
 
-// const setFinalizerTx = await flipTestContract.set_finalizer(finalizer);
-// await provider.waitForTransaction(setFinalizerTx.transaction_hash);
 
 // const tokenSupportTx = await flipTestContract.set_token_support(shortString.encodeShortString(tokenGoerliETHIdentifier), tokenGoerliETHAddress, tokenETHMaxBettable, tokenETHMinBettable);
 // const tokenSupportReceipt = await provider.waitForTransaction(tokenSupportTx.transaction_hash);
 // console.log('Status:', tokenSupportReceipt.execution_status);
 
-let res = await flipTestContract.issue_request(cairo.uint256(1), cairo.uint256(1000000000000000), "1", shortString.encodeShortString(tokenWETHIdentifier));
-let issueReqRes = await provider.waitForTransaction(res.transaction_hash);
-console.log('Status WETH:', issueReqRes.execution_status);
 
 const isSupported = await flipTestContract.is_token_supported(shortString.encodeShortString(tokenGoerliETHIdentifier));
 console.log(`Is ${tokenGoerliETHIdentifier} supported? = ${isSupported}`);
 
-// const tf = await ethContract.transfer(treasuryAddress, cairo.uint256(940000000000000));
-// const tf_req = await provider.waitForTransaction(tf.transaction_hash);
-// console.log('Status ETH Tx:', tf_req.execution_status);
 
-res = await flipTestContract.issue_request(cairo.uint256(1), cairo.uint256(940000000000000), "0", shortString.encodeShortString(tokenGoerliETHIdentifier));
-issueReqRes = await provider.waitForTransaction(res.transaction_hash);
+let res = await flipTestContract.issue_request(cairo.uint256(1), cairo.uint256(940000000000000), "0", shortString.encodeShortString(tokenGoerliETHIdentifier));
+let issueReqRes = await provider.waitForTransaction(res.transaction_hash);
 console.log('Status Issue Request with ETH:', issueReqRes.execution_status);
 
 reqId = await flipTestContract.get_next_request_id();
-console.log("Initial balance =", reqId.toString()); 
+console.log("Next Request ID =", reqId.toString()); 
 
 function getConfig(network) {
     let privateKey = process.env.STARKNET_PRIVATE_KEY;

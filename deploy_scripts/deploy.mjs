@@ -1,6 +1,5 @@
 
-import { Contract, Account, constants, CallData, RpcProvider, shortString } from 'starknet';
-import { json } from 'starknet';
+import { Contract, Account, constants, CallData, RpcProvider, shortString, num, json, cairo } from 'starknet';
 import { execSync } from 'child_process';
 import fs from 'fs';
 
@@ -42,19 +41,44 @@ const contractConstructor = contractCallData.compile("constructor", {
 
 
 const deployResponse = await account.declareAndDeploy({ contract: compiledTestSierra, casm: compiledTestCasm, constructorCalldata: contractConstructor });
-// Connect the new contract instance:
-const myTestContract = new Contract(compiledTestSierra.abi, deployResponse.deploy.contract_address, provider);
+const flipTestContract = new Contract(compiledTestSierra.abi, deployResponse.deploy.contract_address, provider);
 console.log("FlipBlob Contract Class Hash =", deployResponse.declare.class_hash);
-console.log('✅ FlibBlob Contract connected at =', myTestContract.address);
-myTestContract.connect(account);
+console.log('✅ FlibBlob Contract connected at =', flipTestContract.address);
+flipTestContract.connect(account);
 
-const tokenSupportTx = await myTestContract.set_token_support(shortString.encodeShortString(tokenETHIdentifier), tokenETHAddress, tokenETHMaxBettable, tokenETHMinBettable);
+const ETHproxyAddress = tokenETHAddress; // address of ETH proxy
+const compiledProxy = await provider.getClassAt(ETHproxyAddress); // abi of proxy
+const proxyContract = new Contract(compiledProxy.abi, ETHproxyAddress, provider);
+const { address: implementationAddress } = await proxyContract.implementation();
+console.log("implementation ERC20 Address =", num.toHex(implementationAddress));
+const classHashERC20Class = await provider.getClassHashAt(num.toHex(implementationAddress)); // read the class hash related to this contract address.
+console.log("classHash of ERC20 =", classHashERC20Class);
+const compiledERC20 = await provider.getClassByHash(classHashERC20Class); // final objective : the answer contains the abi of the ERC20.
+const ethContract = new Contract(compiledERC20.abi, ETHproxyAddress, provider);
+ethContract.connect(account);
+
+
+const tokenSupportTx = await flipTestContract.set_token_support(shortString.encodeShortString(tokenETHIdentifier), tokenETHAddress, tokenETHMaxBettable, tokenETHMinBettable);
 const tokenSupportReceipt = await provider.waitForTransaction(tokenSupportTx.transaction_hash);
 console.log('Status:', tokenSupportReceipt.execution_status);
 
-// const transferOwnershipTx = await myTestContract.transfer_ownership(argentWalletAddress);
-// const transferOwnershipReceipt = await provider.waitForTransaction(transferOwnershipTx.transaction_hash);
-// console.log('Status:', transferOwnershipReceipt.execution_status);
+
+const EthResApprove = await ethContract.approve(flipTestContract.address, cairo.uint256(97000000000000000000000000));
+await provider.waitForTransaction(EthResApprove.transaction_hash);
+const ethAllowance = await ethContract.allowance(accountAddress, flipTestContract.address);
+console.log("Allowance =", ethAllowance); 
+
+
+const isSupported = await flipTestContract.is_token_supported(shortString.encodeShortString(tokenETHIdentifier));
+console.log(`Is ${tokenETHIdentifier} supported? = ${isSupported}`);
+
+const res = await flipTestContract.issue_request(cairo.uint256(1), cairo.uint256(tokenETHMinBettable + 100000), "0", shortString.encodeShortString(tokenETHIdentifier));
+const issueReqRes = await provider.waitForTransaction(res.transaction_hash);
+console.log('Status Issue Request with ETH:', issueReqRes.execution_status);
+
+const reqId = await flipTestContract.get_next_request_id();
+console.log("Next Request ID =", reqId.toString()); 
+
 
 console.log(`Token support set for ${tokenETHAddress} with the name ${tokenETHIdentifier}. The max bettable in Wei is : ${tokenETHMaxBettable}`);
 console.log("Make sure that: ");
