@@ -15,9 +15,8 @@ mod fork_test {
     use flipblob::flip::IFlipSafeDispatcher;
     use flipblob::flip::IFlipSafeDispatcherTrait;
     use openzeppelin::token::erc20::interface::{
-        IERC20CamelOnlyDispatcher, IERC20CamelOnlyDispatcherTrait
+        IERC20CamelDispatcher, IERC20CamelDispatcherTrait
     };
-    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use flipblob::common_fork;
     use snforge_std::{declare, ContractClassTrait, start_prank, stop_prank, PrintTrait};
     use starknet::contract_address_const;
@@ -106,7 +105,7 @@ mod fork_test {
     }
 
     fn finish_approvals(
-        ref erc20_safe_dispatcher: IERC20Dispatcher,
+        ref erc20_safe_dispatcher: IERC20CamelDispatcher,
         flip_contract_address: @ContractAddress,
         erc20_contract_address: @ContractAddress,
         amount: u256
@@ -176,10 +175,9 @@ mod fork_test {
             0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
         >();
 
-        let mut eth_camel_dispatcher = IERC20CamelOnlyDispatcher {
+        let mut eth_camel_dispatcher = IERC20CamelDispatcher {
             contract_address: eth_contract_address
         };
-        let mut eth_snake_dispatcher = IERC20Dispatcher { contract_address: eth_contract_address };
         let max_bet_amount_meth: u128 = 39000000000000000;
         let min_bet_amount_meth: u128 = 100000;
         set_token_support(
@@ -196,7 +194,7 @@ mod fork_test {
         prepare_rng(ref request_ids, ref random_numbers);
 
         finish_approvals(
-            ref eth_snake_dispatcher,
+            ref eth_camel_dispatcher,
             @flip_contract_address,
             @eth_contract_address,
             1000000000000000000
