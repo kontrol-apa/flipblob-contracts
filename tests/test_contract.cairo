@@ -791,7 +791,7 @@ mod tests {
             }
         }
 
-        match flip_safe_dispatcher.update_treasury('badguy') {
+        match flip_safe_dispatcher.update_treasury(common::badguy()) {
             Result::Ok(_) => panic_with_felt252('Should\'ve Panicked'),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
