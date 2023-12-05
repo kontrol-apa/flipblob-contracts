@@ -14,7 +14,9 @@ mod fork_test {
     use clone::Clone;
     use flipblob::flip::IFlipSafeDispatcher;
     use flipblob::flip::IFlipSafeDispatcherTrait;
-    use openzeppelin::token::erc20::interface::{IERC20CamelOnlyDispatcher, IERC20CamelOnlyDispatcherTrait};
+    use openzeppelin::token::erc20::interface::{
+        IERC20CamelOnlyDispatcher, IERC20CamelOnlyDispatcherTrait
+    };
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use flipblob::common_fork;
     use snforge_std::{declare, ContractClassTrait, start_prank, stop_prank, PrintTrait};
@@ -103,13 +105,12 @@ mod fork_test {
         };
     }
 
-    fn approve_and_mint(
+    fn finish_approvals(
         ref erc20_safe_dispatcher: IERC20Dispatcher,
         flip_contract_address: @ContractAddress,
         erc20_contract_address: @ContractAddress,
         amount: u256
     ) {
-        
         start_prank(*erc20_contract_address, common_fork::user()); // MOCK USER TO FLIP
         erc20_safe_dispatcher.approve(*flip_contract_address, amount);
         stop_prank(*erc20_contract_address);
@@ -174,9 +175,10 @@ mod fork_test {
         let eth_contract_address = contract_address_const::<
             0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
         >();
-        
-        
-        let mut eth_camel_dispatcher = IERC20CamelOnlyDispatcher { contract_address: eth_contract_address };
+
+        let mut eth_camel_dispatcher = IERC20CamelOnlyDispatcher {
+            contract_address: eth_contract_address
+        };
         let mut eth_snake_dispatcher = IERC20Dispatcher { contract_address: eth_contract_address };
         let max_bet_amount_meth: u128 = 39000000000000000;
         let min_bet_amount_meth: u128 = 100000;
@@ -193,7 +195,7 @@ mod fork_test {
         let mut random_numbers = ArrayTrait::<u256>::new();
         prepare_rng(ref request_ids, ref random_numbers);
 
-        approve_and_mint(
+        finish_approvals(
             ref eth_snake_dispatcher,
             @flip_contract_address,
             @eth_contract_address,
@@ -205,21 +207,18 @@ mod fork_test {
         let pre_bet_balance = eth_camel_dispatcher.balanceOf(common_fork::user());
         start_prank(flip_contract_address, common_fork::user()); // MOCK USER TO FLIP
         match flip_safe_dispatcher.issue_request(1, bet.into(), super::HEAD, 'ETH') {
-            Result::Ok(_) => {
-               'OKAYY!'.print();
-                
-            },
+            Result::Ok(_) => { 'Done.'.print(); },
             Result::Err(panic_data) => {
-               panic_data.print();
-               'Shouldn Panic!'.print();
+                panic_data.print();
+                panic_with_felt252('Should have Panicked');
             }
         }
         stop_prank(flip_contract_address);
         let pre_balance = eth_camel_dispatcher.balanceOf(common_fork::user());
-        
+
         pre_bet_balance.print();
         pre_balance.print();
-        assert((pre_bet_balance - pre_balance) == (bet.into()), 'Balances1 dont match!');
+        assert((pre_bet_balance - pre_balance) == (bet.into()), 'Balances dont match!');
 
         finalize_request(
             ref flip_safe_dispatcher,
