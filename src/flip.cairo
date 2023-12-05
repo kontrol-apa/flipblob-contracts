@@ -35,19 +35,13 @@ trait IFlip<TContractState> {
     fn get_latest_flip_by_user(self: @TContractState, userAddress: ContractAddress) -> u256 ;
 }
 
-#[starknet::interface]
-trait ERC20<TContractState> {
-    fn transferFrom(ref self: TContractState, sender: felt252, recipient: felt252, amount: u256);
-    fn balanceOf(self: @TContractState, account: felt252) -> u256;
-}
-
 #[starknet::contract]
 mod Flip {
-    use starknet::ContractAddress;
+    use openzeppelin::token::erc20::interface::{IERC20CamelDispatcher, IERC20CamelDispatcherTrait};
     use openzeppelin::access::ownable::OwnableComponent;
     use array::{Span, ArrayTrait, SpanTrait};
+    use starknet::ContractAddress;
     use starknet::{get_caller_address, get_contract_address};
-    use openzeppelin::token::erc20::interface::{IERC20CamelOnlyDispatcher, IERC20CamelOnlyDispatcherTrait};
     use option::OptionTrait;
     use zeroable::Zeroable;
     use traits::Into;
@@ -181,14 +175,14 @@ mod Flip {
                     assert(token_metadata.maxBetable.into() > wager_amount, 'Wager too high');
                     assert(token_metadata.minBetable.into() <= wager_amount, 'Wager too low');
 
-                    let treasuryBalance = IERC20CamelOnlyDispatcher {
+                    let treasuryBalance = IERC20CamelDispatcher {
                         contract_address: token_metadata.tokenAddress
                     }
                         .balanceOf(self.treasury_address.read());
 
                     assert(treasuryBalance >= wager_amount * times, 'Treasury cant accept the bet');
 
-                    IERC20CamelOnlyDispatcher { contract_address: token_metadata.tokenAddress }
+                    IERC20CamelDispatcher { contract_address: token_metadata.tokenAddress }
                         .transferFrom(caller, self.treasury_address.read(), wager_amount * times);
                     let current_request_id: felt252 = self.next_request_id.read();
                     self.next_request_id.write(current_request_id + 1); // increment
@@ -255,7 +249,7 @@ mod Flip {
                 profit = (wager_amount * (100 - self.flip_fee.read()) / 100) * success_count;
                 match self.get_token_support(erc20_name) {
                     Option::Some(token_metadata) => {
-                        IERC20CamelOnlyDispatcher { contract_address: token_metadata.tokenAddress }
+                        IERC20CamelDispatcher { contract_address: token_metadata.tokenAddress }
                             .transferFrom(
                                 self.treasury_address.read(),
                                 user_address,
