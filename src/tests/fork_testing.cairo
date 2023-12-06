@@ -3,7 +3,6 @@ const TAIL: felt252 = 0;
 const INVALID: felt252 = 2;
 
 
-mod fork_test {
     use array::{Span, ArrayTrait, SpanTrait, ArrayTCloneImpl};
     use result::ResultTrait;
     use option::{Option, OptionTrait};
@@ -204,7 +203,7 @@ mod fork_test {
         let bet = min_bet_amount_meth + 10;
         let pre_bet_balance = eth_camel_dispatcher.balanceOf(common_fork::user());
         start_prank(flip_contract_address, common_fork::user()); // MOCK USER TO FLIP
-        match flip_safe_dispatcher.issue_request(1, bet.into(), super::HEAD, 'ETH') {
+        match flip_safe_dispatcher.issue_request(1, bet.into(), HEAD, 'ETH') {
             Result::Ok(_) => { 'Done.'.print(); },
             Result::Err(panic_data) => {
                 panic_data.print();
@@ -252,7 +251,7 @@ mod fork_test {
         );
 
         start_prank(flip_contract_address, common_fork::user()); // MOCK USER TO FLIP
-        match flip_safe_dispatcher.issue_request(1, bet.into(), super::INVALID, 'ETH') {
+        match flip_safe_dispatcher.issue_request(1, bet.into(), INVALID, 'ETH') {
             Result::Ok(_) => 'Passed.'.print(),
             Result::Err(panic_data) => {
                 (*panic_data.at(0)).print();
@@ -261,4 +260,3 @@ mod fork_test {
         }
         stop_prank(flip_contract_address);
     }
-}
