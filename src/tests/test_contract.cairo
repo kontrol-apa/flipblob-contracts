@@ -15,9 +15,8 @@ use flipblob::flip::IFlipSafeDispatcher;
 use flipblob::flip::IFlipSafeDispatcherTrait;
 use flipblob::merc20::{MockERC20ABIDispatcher, MockERC20ABIDispatcherTrait};
 use starknet::get_caller_address;
-use flipblob::common;
+use flipblob::tests::test_utils::common;
 use snforge_std::{declare, ContractClassTrait, start_prank, stop_prank, PrintTrait};
-
 const MAX_BET_AMOUNT: u256 = 10;
 fn do_a_panic(msg: felt252) {
     let mut arr = ArrayTrait::new();

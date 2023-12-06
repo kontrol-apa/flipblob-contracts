@@ -14,7 +14,7 @@ use clone::Clone;
 use flipblob::flip::IFlipSafeDispatcher;
 use flipblob::flip::IFlipSafeDispatcherTrait;
 use openzeppelin::token::erc20::interface::{IERC20CamelDispatcher, IERC20CamelDispatcherTrait};
-use flipblob::common_fork;
+use flipblob::tests::test_utils::common_fork;
 use snforge_std::{declare, ContractClassTrait, start_prank, stop_prank, PrintTrait};
 use starknet::contract_address_const;
 
