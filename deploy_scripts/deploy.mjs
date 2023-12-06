@@ -46,356 +46,20 @@ console.log("FlipBlob Contract Class Hash =", deployResponse.declare.class_hash)
 console.log('✅ FlibBlob Contract connected at =', flipTestContract.address);
 flipTestContract.connect(account);
 
+
+
 const ETHproxyAddress = tokenETHAddress; // address of ETH proxy
 const compiledProxy = await provider.getClassAt(ETHproxyAddress); // abi of proxy
 const proxyContract = new Contract(compiledProxy.abi, ETHproxyAddress, provider);
-//const { address: implementationAddress } = await proxyContract.implementation();
-//const implementationAddress = "0x00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3";
-//console.log("implementation ERC20 Address =", num.toHex(implementationAddress));
-//const classHashERC20Class = await provider.getClassHashAt(num.toHex(implementationAddress)); // read the class hash related to this contract address.
-//console.log("classHash of ERC20 =", classHashERC20Class);
-//const compiledERC20 = await provider.getClassByHash(classHashERC20Class); // final objective : the answer contains the abi of the ERC20.
-const WETH_ABI = [
-    {
-      "members": [
-        {
-          "name": "low",
-          "offset": 0,
-          "type": "felt"
-        },
-        {
-          "name": "high",
-          "offset": 1,
-          "type": "felt"
-        }
-      ],
-      "name": "Uint256",
-      "size": 2,
-      "type": "struct"
-    },
-    {
-      "data": [
-        {
-          "name": "from_",
-          "type": "felt"
-        },
-        {
-          "name": "to",
-          "type": "felt"
-        },
-        {
-          "name": "value",
-          "type": "Uint256"
-        }
-      ],
-      "keys": [],
-      "name": "Transfer",
-      "type": "event"
-    },
-    {
-      "data": [
-        {
-          "name": "owner",
-          "type": "felt"
-        },
-        {
-          "name": "spender",
-          "type": "felt"
-        },
-        {
-          "name": "value",
-          "type": "Uint256"
-        }
-      ],
-      "keys": [],
-      "name": "Approval",
-      "type": "event"
-    },
-    {
-      "inputs": [],
-      "name": "name",
-      "outputs": [
-        {
-          "name": "name",
-          "type": "felt"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "symbol",
-      "outputs": [
-        {
-          "name": "symbol",
-          "type": "felt"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "totalSupply",
-      "outputs": [
-        {
-          "name": "totalSupply",
-          "type": "Uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "decimals",
-      "outputs": [
-        {
-          "name": "decimals",
-          "type": "felt"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "name": "account",
-          "type": "felt"
-        }
-      ],
-      "name": "balanceOf",
-      "outputs": [
-        {
-          "name": "balance",
-          "type": "Uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "name": "owner",
-          "type": "felt"
-        },
-        {
-          "name": "spender",
-          "type": "felt"
-        }
-      ],
-      "name": "allowance",
-      "outputs": [
-        {
-          "name": "remaining",
-          "type": "Uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "permittedMinter",
-      "outputs": [
-        {
-          "name": "minter",
-          "type": "felt"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "initialized",
-      "outputs": [
-        {
-          "name": "res",
-          "type": "felt"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "get_version",
-      "outputs": [
-        {
-          "name": "version",
-          "type": "felt"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "get_identity",
-      "outputs": [
-        {
-          "name": "identity",
-          "type": "felt"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "name": "init_vector_len",
-          "type": "felt"
-        },
-        {
-          "name": "init_vector",
-          "type": "felt*"
-        }
-      ],
-      "name": "initialize",
-      "outputs": [],
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "name": "recipient",
-          "type": "felt"
-        },
-        {
-          "name": "amount",
-          "type": "Uint256"
-        }
-      ],
-      "name": "transfer",
-      "outputs": [
-        {
-          "name": "success",
-          "type": "felt"
-        }
-      ],
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "name": "sender",
-          "type": "felt"
-        },
-        {
-          "name": "recipient",
-          "type": "felt"
-        },
-        {
-          "name": "amount",
-          "type": "Uint256"
-        }
-      ],
-      "name": "transferFrom",
-      "outputs": [
-        {
-          "name": "success",
-          "type": "felt"
-        }
-      ],
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "name": "spender",
-          "type": "felt"
-        },
-        {
-          "name": "amount",
-          "type": "Uint256"
-        }
-      ],
-      "name": "approve",
-      "outputs": [
-        {
-          "name": "success",
-          "type": "felt"
-        }
-      ],
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "name": "spender",
-          "type": "felt"
-        },
-        {
-          "name": "added_value",
-          "type": "Uint256"
-        }
-      ],
-      "name": "increaseAllowance",
-      "outputs": [
-        {
-          "name": "success",
-          "type": "felt"
-        }
-      ],
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "name": "spender",
-          "type": "felt"
-        },
-        {
-          "name": "subtracted_value",
-          "type": "Uint256"
-        }
-      ],
-      "name": "decreaseAllowance",
-      "outputs": [
-        {
-          "name": "success",
-          "type": "felt"
-        }
-      ],
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "name": "recipient",
-          "type": "felt"
-        },
-        {
-          "name": "amount",
-          "type": "Uint256"
-        }
-      ],
-      "name": "permissionedMint",
-      "outputs": [],
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "name": "account",
-          "type": "felt"
-        },
-        {
-          "name": "amount",
-          "type": "Uint256"
-        }
-      ],
-      "name": "permissionedBurn",
-      "outputs": [],
-      "type": "function"
-    }
-  ]
-const ethContract = new Contract(WETH_ABI, ETHproxyAddress, provider);
+const { address: implementationAddress } = await proxyContract.implementation();
+// specific to this proxy : Implementation() returns an address of implementation.
+// Other proxies returns generaly a class hash of implementation
+console.log("implementation ERC20 Address =", num.toHex(implementationAddress));
+const classHashERC20Class = await provider.getClassHashAt(num.toHex(implementationAddress)); // read the class hash related to this contract address.
+console.log("classHash of ERC20 =", classHashERC20Class);
+const compiledERC20 = await provider.getClassByHash(classHashERC20Class); // final objective : the answer contains the abi of the ERC20.
+
+const ethContract = new Contract(compiledERC20.abi, ETHproxyAddress, provider);
 ethContract.connect(account);
 
 
@@ -458,12 +122,17 @@ function getConfig(network) {
     return { privateKey, accountAddress, provider};
 }
 
-function scarbBuild() {
+function executeCommand(command) {
     try {
-        const stdout = execSync('scarb build');
-        console.log(`stdout: ${stdout}`);
+        const stdout = execSync(command);
+        console.log(`${command} ${stdout}`);
     } catch (error) {
         console.error(`Execution error: ${error}`);
         console.error(`stderr: ${error.stderr}`);
     }
+}
+
+function scarbBuild() {
+    executeCommand('scarb clean');
+    executeCommand('scarb build');
 }
