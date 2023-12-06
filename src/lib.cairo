@@ -1,5 +1,10 @@
-mod flip;
-mod merc20;
+mod flip {
+    mod flipblob;
+}
+
+mod erc20 {
+    mod erc20;
+}
 
 #[cfg(test)]
 mod tests {
