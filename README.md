@@ -19,7 +19,7 @@
 ### USEFUL COMMANDS
 ```bash
 # test 
-snforge
+snforge test
 
 # build
 scarb build
