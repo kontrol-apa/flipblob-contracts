@@ -338,6 +338,7 @@ mod Flip {
                 let request = self.requests.read(index);
                 if request.userAddress == userAddress {
                     located_index = index.into();
+                    break;
                 }
                 if index == 0 {
                     break;
