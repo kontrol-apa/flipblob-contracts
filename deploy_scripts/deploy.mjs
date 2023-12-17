@@ -11,7 +11,7 @@ const tokenETHMinBettable = "900000000000000"
 
 const treasuryAddress = "0x31c66f44d8455e5cac18b7016476685af8bd78bf4128cb5375ff2c45bc137c2";
 const ownerAddress = "0x31c66f44d8455e5cac18b7016476685af8bd78bf4128cb5375ff2c45bc137c2";
-const finalizerAddress = "0x003CF8aa30dA7aDB1D5a28687BF6802d80Bb8A02FBC9A4142020EC8309D7aaD0";
+const finalizerAddress = "0x551e361b1f456856968d00e2ea991daecc04eed605903030ffbc547616da258";
 const flipFeePercentage = 5;
 
 const absolutePath = "../target/dev/"
