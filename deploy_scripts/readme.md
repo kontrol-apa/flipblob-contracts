@@ -15,6 +15,7 @@ Set the following environment variables:
 
 - `STARKNET_PRIVATE_KEY`: Your Starknet private key.
 - `STARKNET_ACCOUNT_ADDRESS`: Your Starknet account address.
+- `PROVIDER_API_KEY`: Your Starknet provider URL.
 
 ### Using `config.json`
 
